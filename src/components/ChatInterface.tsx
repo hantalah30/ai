@@ -1,9 +1,9 @@
-import React, { useState, useRef, useEffect } from 'react';
-import MessageBubble from './MessageBubble';
-import MessageInput from './MessageInput';
-import FileUploadArea from './FileUploadArea';
-import TypingIndicator from './TypingIndicator';
-import { Message, FileUpload } from '../types';
+import React, { useState, useRef, useEffect } from "react";
+import MessageBubble from "./MessageBubble";
+import MessageInput from "./MessageInput";
+import FileUploadArea from "./FileUploadArea";
+import TypingIndicator from "./TypingIndicator";
+import { Message, FileUpload } from "../types";
 
 interface ChatInterfaceProps {
   messages: Message[];
@@ -11,6 +11,7 @@ interface ChatInterfaceProps {
   onFileUpload: (files: FileUpload[]) => void;
   isTyping: boolean;
   uploadedFiles: FileUpload[];
+  onUpdateMessage: (id: string, newContent: string) => void; // <-- Prop baru
 }
 
 const ChatInterface: React.FC<ChatInterfaceProps> = ({
@@ -18,13 +19,14 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   onSendMessage,
   onFileUpload,
   isTyping,
-  uploadedFiles
+  uploadedFiles,
+  onUpdateMessage, // <-- Prop baru
 }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [showFileUpload, setShowFileUpload] = useState(false);
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
   useEffect(() => {
@@ -40,9 +42,10 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
             key={message.id}
             message={message}
             isLatest={index === messages.length - 1}
+            onUpdateMessage={onUpdateMessage} // <-- Prop diteruskan
           />
         ))}
-        
+
         {isTyping && <TypingIndicator />}
         <div ref={messagesEndRef} />
       </div>
