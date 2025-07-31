@@ -3,6 +3,7 @@ import Header from "./components/Header";
 import ChatInterface from "./components/ChatInterface";
 import TerminalMode from "./components/TerminalMode";
 import DataStream from "./components/DataStream";
+import CodeInsertModal from "./components/CodeInsertModal";
 import { Message, FileUpload } from "./types";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
@@ -24,6 +25,7 @@ function App() {
   const [isTerminalMode, setIsTerminalMode] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<FileUpload[]>([]);
+  const [showCodeModal, setShowCodeModal] = useState(false);
 
   useEffect(() => {
     // Add ambient cyberpunk background sounds would go here
@@ -78,6 +80,31 @@ function App() {
     setUploadedFiles((prev) => [...prev, ...files]);
   };
 
+  const handleMessageUpdate = (messageId: string, newContent: string) => {
+    setMessages((prev) =>
+      prev.map((msg) =>
+        msg.id === messageId ? { ...msg, content: newContent } : msg
+      )
+    );
+  };
+
+  const handleInsertCode = (code: string, language: string, filename?: string) => {
+    const codeBlock = `\`\`\`${language}${filename ? `\n// ${filename}` : ''}\n${code}\n\`\`\``;
+    
+    // For now, we'll create a new message with the code
+    // In a real implementation, you might want to insert it into the current input
+    const codeMessage: Message = {
+      id: Date.now().toString(),
+      content: codeBlock,
+      sender: "user",
+      timestamp: new Date(),
+      isCode: true,
+      language
+    };
+    
+    setMessages((prev) => [...prev, codeMessage]);
+  };
+
   return (
     // overflow-hidden dihapus dari div ini untuk memungkinkan scroll
     <div className="min-h-screen bg-gray-900 relative">
@@ -113,12 +140,20 @@ function App() {
               messages={messages}
               onSendMessage={handleSendMessage}
               onFileUpload={handleFileUpload}
+              onMessageUpdate={handleMessageUpdate}
               isTyping={isTyping}
               uploadedFiles={uploadedFiles}
             />
           )}
         </main>
       </div>
+
+      {/* Code Insert Modal */}
+      <CodeInsertModal
+        isOpen={showCodeModal}
+        onClose={() => setShowCodeModal(false)}
+        onInsert={handleInsertCode}
+      />
 
       {/* Glitch Effect Overlay */}
       <div className="fixed inset-0 pointer-events-none mix-blend-overlay opacity-10">

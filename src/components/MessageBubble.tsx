@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { User, Bot, Copy, Code, FileText } from 'lucide-react';
 import { Message } from '../types';
+import CodeBlock from './CodeBlock';
 
 interface MessageBubbleProps {
   message: Message;
   isLatest: boolean;
+  onMessageUpdate?: (messageId: string, newContent: string) => void;
 }
 
-const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isLatest }) => {
+const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isLatest, onMessageUpdate }) => {
   const [isVisible, setIsVisible] = useState(false);
   const isUser = message.sender === 'user';
 
@@ -22,6 +24,66 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isLatest }) => {
   const copyToClipboard = () => {
     navigator.clipboard.writeText(message.content);
   };
+
+  const detectCodeBlocks = (text: string) => {
+    const codeBlockRegex = /```(\w+)?\n?([\s\S]*?)```/g;
+    const blocks = [];
+    let match;
+    let lastIndex = 0;
+    let blockId = 0;
+
+    while ((match = codeBlockRegex.exec(text)) !== null) {
+      // Add text before code block
+      if (match.index > lastIndex) {
+        blocks.push({
+          type: 'text',
+          content: text.slice(lastIndex, match.index)
+        });
+      }
+
+      // Add code block
+      blocks.push({
+        type: 'code',
+        id: `code-${blockId++}`,
+        language: match[1] || 'text',
+        code: match[2].trim()
+      });
+
+      lastIndex = match.index + match[0].length;
+    }
+
+    // Add remaining text
+    if (lastIndex < text.length) {
+      blocks.push({
+        type: 'text',
+        content: text.slice(lastIndex)
+      });
+    }
+
+    return blocks.length > 1 ? blocks : [{ type: 'text', content: text }];
+  };
+
+  const handleCodeUpdate = (blockId: string, newCode: string) => {
+    if (onMessageUpdate) {
+      // Update the message content with the new code
+      let updatedContent = message.content;
+      const codeBlockRegex = /```(\w+)?\n?([\s\S]*?)```/g;
+      let blockIndex = 0;
+      
+      updatedContent = updatedContent.replace(codeBlockRegex, (match, lang, code) => {
+        if (`code-${blockIndex}` === blockId) {
+          blockIndex++;
+          return `\`\`\`${lang || 'text'}\n${newCode}\n\`\`\``;
+        }
+        blockIndex++;
+        return match;
+      });
+      
+      onMessageUpdate(message.id, updatedContent);
+    }
+  };
+
+  const contentBlocks = detectCodeBlocks(message.content);
 
   return (
     <div
@@ -59,7 +121,24 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isLatest }) => {
 
             {/* Content */}
             <div className="relative">
-              <p className="text-sm font-mono leading-relaxed whitespace-pre-wrap">{message.content}</p>
+              <div className="space-y-3">
+                {contentBlocks.map((block, index) => (
+                  <div key={index}>
+                    {block.type === 'text' ? (
+                      <p className="text-sm font-mono leading-relaxed whitespace-pre-wrap">
+                        {block.content}
+                      </p>
+                    ) : (
+                      <CodeBlock
+                        code={block.code}
+                        language={block.language}
+                        onCodeUpdate={(newCode) => handleCodeUpdate(block.id, newCode)}
+                        isEditable={isUser}
+                      />
+                    )}
+                  </div>
+                ))}
+              </div>
               
               {/* Files Display */}
               {message.files && message.files.length > 0 && (

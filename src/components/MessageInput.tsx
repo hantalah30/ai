@@ -5,12 +5,14 @@ import { FileUpload } from '../types';
 interface MessageInputProps {
   onSendMessage: (content: string, files?: FileUpload[]) => void;
   onToggleFileUpload: () => void;
+  onInsertCode: () => void;
   uploadedFiles: FileUpload[];
 }
 
 const MessageInput: React.FC<MessageInputProps> = ({
   onSendMessage,
   onToggleFileUpload,
+  onInsertCode,
   uploadedFiles
 }) => {
   const [message, setMessage] = useState('');
@@ -78,6 +80,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
               
               <button
                 type="button"
+                onClick={onInsertCode}
                 className="p-2 text-gray-400 hover:text-green-400 hover:bg-green-400/10 rounded-lg transition-all duration-200"
                 title="Insert code"
               >

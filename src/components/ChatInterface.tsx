@@ -9,6 +9,7 @@ interface ChatInterfaceProps {
   messages: Message[];
   onSendMessage: (content: string, files?: FileUpload[]) => void;
   onFileUpload: (files: FileUpload[]) => void;
+  onMessageUpdate?: (messageId: string, newContent: string) => void;
   isTyping: boolean;
   uploadedFiles: FileUpload[];
 }
@@ -17,6 +18,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   messages,
   onSendMessage,
   onFileUpload,
+  onMessageUpdate,
   isTyping,
   uploadedFiles
 }) => {
@@ -40,6 +42,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
             key={message.id}
             message={message}
             isLatest={index === messages.length - 1}
+            onInsertCode={() => {}} // This will be handled by the parent component
+            onMessageUpdate={onMessageUpdate}
           />
         ))}
         
