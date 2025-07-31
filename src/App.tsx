@@ -44,7 +44,7 @@ function App() {
 
     try {
       // Mencoba menggunakan model 'gemini-2.5-pro' sesuai permintaan
-      const model = genAI.getGenerativeModel({ model: "gemini-2.5-pro" });
+      const model = genAI.getGenerativeModel({ model: "gemini-pro" });
       const result = await model.generateContent(content);
       const response = await result.response;
       const text = response.text();
@@ -79,7 +79,8 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-900 relative overflow-hidden">
+    // overflow-hidden dihapus dari div ini untuk memungkinkan scroll
+    <div className="min-h-screen bg-gray-900 relative">
       {/* Animated Background */}
       <div className="fixed inset-0 bg-gradient-to-br from-gray-900 via-purple-900/20 to-blue-900/20"></div>
 
@@ -98,7 +99,9 @@ function App() {
           onToggleTerminal={() => setIsTerminalMode(!isTerminalMode)}
         />
 
-        <main className="flex-1 flex flex-col overflow-hidden">
+        <main className="flex-1 flex flex-col overflow-y-auto">
+          {" "}
+          {/* overflow-y-auto ditambahkan untuk memastikan main area bisa di-scroll jika perlu */}
           {isTerminalMode ? (
             <TerminalMode
               messages={messages}
