@@ -32,9 +32,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   }, [messages, isTyping]);
 
   return (
-    <div className="flex-1 flex flex-col max-w-4xl mx-auto w-full px-4">
+    <div className="flex-1 flex flex-col max-w-4xl mx-auto w-full px-4 h-full">
       {/* Messages Container */}
-      <div className="flex-1 overflow-y-auto py-6 space-y-4 scrollbar-thin scrollbar-track-gray-800 scrollbar-thumb-cyan-500/50">
+      <div className="flex-1 overflow-y-auto py-6 space-y-4 scrollbar-thin scrollbar-track-gray-800 scrollbar-thumb-cyan-500/50 min-h-0">
         {messages.map((message, index) => (
           <MessageBubble
             key={message.id}
@@ -57,7 +57,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       )}
 
       {/* Message Input */}
-      <div className="border-t border-cyan-500/30 bg-gray-900/50 backdrop-blur-sm">
+      <div className="border-t border-cyan-500/30 bg-gray-900/50 backdrop-blur-sm flex-shrink-0">
         <MessageInput
           onSendMessage={onSendMessage}
           onToggleFileUpload={() => setShowFileUpload(!showFileUpload)}

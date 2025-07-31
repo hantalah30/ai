@@ -98,9 +98,7 @@ function App() {
           onToggleTerminal={() => setIsTerminalMode(!isTerminalMode)}
         />
 
-        <main className="flex-1 flex flex-col">
-          {" "}
-          {/* <-- overflow-hidden dihapus dari sini */}
+        <main className="flex-1 flex flex-col overflow-hidden">
           {isTerminalMode ? (
             <TerminalMode
               messages={messages}
