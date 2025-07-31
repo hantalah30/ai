@@ -4,6 +4,11 @@ import ChatInterface from './components/ChatInterface';
 import TerminalMode from './components/TerminalMode';
 import DataStream from './components/DataStream';
 import { Message, FileUpload } from './types';
+import { GoogleGenerativeAI } from '@google/generative-ai';
+
+const API_KEY = 'AIzaSyAQMDd0Ts64TNUTLuiTrBNMWmWF217RUFk';
+
+const genAI = new GoogleGenerativeAI(API_KEY);
 
 function App() {
   const [messages, setMessages] = useState<Message[]>([
@@ -35,18 +40,32 @@ function App() {
     setMessages(prev => [...prev, userMessage]);
     setIsTyping(true);
 
-    // Simulate AI response delay
-    setTimeout(() => {
+    try {
+      const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
+      const result = await model.generateContent(content);
+      const response = await result.response;
+      const text = response.text();
+
       const aiResponse: Message = {
         id: (Date.now() + 1).toString(),
-        content: 'I understand your request. Processing your input through my neural networks...',
+        content: text,
         sender: 'ai',
         timestamp: new Date(),
       };
-      
+
       setMessages(prev => [...prev, aiResponse]);
+    } catch (error) {
+      console.error(error);
+      const aiResponse: Message = {
+        id: (Date.now() + 1).toString(),
+        content: 'Sorry, I am having trouble connecting to the neural network. Please try again later.',
+        sender: 'ai',
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, aiResponse]);
+    } finally {
       setIsTyping(false);
-    }, 2000);
+    }
   };
 
   const handleFileUpload = (files: FileUpload[]) => {
