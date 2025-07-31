@@ -1,23 +1,25 @@
-import React, { useState, useEffect } from 'react';
-import Header from './components/Header';
-import ChatInterface from './components/ChatInterface';
-import TerminalMode from './components/TerminalMode';
-import DataStream from './components/DataStream';
-import { Message, FileUpload } from './types';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import React, { useState, useEffect } from "react";
+import Header from "./components/Header";
+import ChatInterface from "./components/ChatInterface";
+import TerminalMode from "./components/TerminalMode";
+import DataStream from "./components/DataStream";
+import { Message, FileUpload } from "./types";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
-const API_KEY = 'AIzaSyAQMDd0Ts64TNUTLuiTrBNMWmWF217RUFk';
+// PERINGATAN: Sangat disarankan untuk memindahkan kunci ini ke lingkungan sisi server
+// atau gunakan metode yang aman untuk menanganinya, daripada menampilkannya di kode sisi klien.
+const API_KEY = "AIzaSyAQMDd0Ts64TNUTLuiTrBNMWmWF217RUFk";
 
 const genAI = new GoogleGenerativeAI(API_KEY);
 
 function App() {
   const [messages, setMessages] = useState<Message[]>([
     {
-      id: '1',
-      content: 'Welcome to CyberAI. How can I assist you today?',
-      sender: 'ai',
+      id: "1",
+      content: "Welcome to CyberAI. How can I assist you today?",
+      sender: "ai",
       timestamp: new Date(),
-    }
+    },
   ]);
   const [isTerminalMode, setIsTerminalMode] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
@@ -32,16 +34,17 @@ function App() {
     const userMessage: Message = {
       id: Date.now().toString(),
       content,
-      sender: 'user',
+      sender: "user",
       timestamp: new Date(),
-      files
+      files,
     };
 
-    setMessages(prev => [...prev, userMessage]);
+    setMessages((prev) => [...prev, userMessage]);
     setIsTyping(true);
 
     try {
-      const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
+      // Mencoba menggunakan model 'gemini-2.5-pro' sesuai permintaan
+      const model = genAI.getGenerativeModel({ model: "gemini-2.5-pro" });
       const result = await model.generateContent(content);
       const response = await result.response;
       const text = response.text();
@@ -49,37 +52,40 @@ function App() {
       const aiResponse: Message = {
         id: (Date.now() + 1).toString(),
         content: text,
-        sender: 'ai',
+        sender: "ai",
         timestamp: new Date(),
       };
 
-      setMessages(prev => [...prev, aiResponse]);
+      setMessages((prev) => [...prev, aiResponse]);
     } catch (error) {
-      console.error(error);
+      // Log kesalahan penuh untuk debugging yang lebih baik
+      console.error("Gemini API Error:", error);
+
       const aiResponse: Message = {
         id: (Date.now() + 1).toString(),
-        content: 'Sorry, I am having trouble connecting to the neural network. Please try again later.',
-        sender: 'ai',
+        content:
+          "Sorry, I am having trouble connecting to the neural network. Please check the console for errors and ensure your API key and selected model are configured correctly in your Google Cloud project.",
+        sender: "ai",
         timestamp: new Date(),
       };
-      setMessages(prev => [...prev, aiResponse]);
+      setMessages((prev) => [...prev, aiResponse]);
     } finally {
       setIsTyping(false);
     }
   };
 
   const handleFileUpload = (files: FileUpload[]) => {
-    setUploadedFiles(prev => [...prev, ...files]);
+    setUploadedFiles((prev) => [...prev, ...files]);
   };
 
   return (
     <div className="min-h-screen bg-gray-900 relative overflow-hidden">
       {/* Animated Background */}
       <div className="fixed inset-0 bg-gradient-to-br from-gray-900 via-purple-900/20 to-blue-900/20"></div>
-      
+
       {/* Data Stream Background */}
       <DataStream />
-      
+
       {/* Scan Lines Effect */}
       <div className="fixed inset-0 pointer-events-none">
         <div className="h-full w-full opacity-5 bg-gradient-to-b from-transparent via-cyan-400/20 to-transparent animate-pulse"></div>
@@ -87,20 +93,22 @@ function App() {
 
       {/* Main Content */}
       <div className="relative z-10 flex flex-col h-screen">
-        <Header 
+        <Header
           isTerminalMode={isTerminalMode}
           onToggleTerminal={() => setIsTerminalMode(!isTerminalMode)}
         />
-        
-        <main className="flex-1 flex flex-col overflow-hidden">
+
+        <main className="flex-1 flex flex-col">
+          {" "}
+          {/* <-- overflow-hidden dihapus dari sini */}
           {isTerminalMode ? (
-            <TerminalMode 
+            <TerminalMode
               messages={messages}
               onSendMessage={handleSendMessage}
               isTyping={isTyping}
             />
           ) : (
-            <ChatInterface 
+            <ChatInterface
               messages={messages}
               onSendMessage={handleSendMessage}
               onFileUpload={handleFileUpload}
