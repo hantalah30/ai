@@ -4,16 +4,6 @@ export interface Message {
   sender: "user" | "ai";
   timestamp: Date;
   files?: FileUpload[];
-  isCode?: boolean;
-  language?: string;
-  codeBlocks?: CodeBlock[];
-}
-
-export interface CodeBlock {
-  id: string;
-  code: string;
-  language: string;
-  filename?: string;
 }
 
 export interface FileUpload {
@@ -25,8 +15,9 @@ export interface FileUpload {
   content?: string;
 }
 
-export interface ChatSettings {
+export interface AppSettings {
   isTerminalMode: boolean;
   soundEnabled: boolean;
   glitchEffects: boolean;
+  model: string;
 }

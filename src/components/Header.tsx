@@ -5,63 +5,52 @@ import AIAvatar from "./AIAvatar";
 interface HeaderProps {
   isTerminalMode: boolean;
   onToggleTerminal: () => void;
+  onOpenSettings: () => void;
 }
 
 const Header: React.FC<HeaderProps> = ({
   isTerminalMode,
   onToggleTerminal,
+  onOpenSettings,
 }) => {
   return (
     <header className="bg-gray-900/80 backdrop-blur-md border-b border-cyan-500/30 relative">
-      <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-cyan-400 to-transparent"></div>
-
       <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
-          {/* Logo and Brand */}
           <div className="flex items-center space-x-2 sm:space-x-4">
             <div className="relative">
               <Zap className="h-8 w-8 text-cyan-400" />
-              <div className="absolute inset-0 animate-ping">
-                <Zap className="h-8 w-8 text-cyan-400 opacity-20" />
-              </div>
             </div>
             <div className="hidden sm:block">
-              <h1 className="text-xl font-bold bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
+              <h1 className="text-xl font-bold bg-gradient-to-r from-cyan-400 to-pink-400 bg-clip-text text-transparent">
                 HAWAI
               </h1>
               <p className="text-xs text-gray-400 font-mono">
-                Neural Network v1.0
+                Neural Network v1.5
               </p>
             </div>
           </div>
 
-          {/* AI Avatar */}
           <div className="flex-1 flex justify-center px-2">
             <AIAvatar />
           </div>
 
-          {/* Controls */}
           <div className="flex items-center space-x-2 sm:space-x-4">
             <button
               onClick={onToggleTerminal}
-              className={`p-2 rounded-lg border transition-all duration-300 ${
-                isTerminalMode
-                  ? "bg-green-500/20 border-green-400 text-green-400 shadow-green-400/50 shadow-lg"
-                  : "bg-gray-800/50 border-gray-600 text-gray-400 hover:border-cyan-400 hover:text-cyan-400"
-              }`}
-              title={
-                isTerminalMode ? "Exit Terminal Mode" : "Enter Terminal Mode"
-              }
+              className="p-2 rounded-lg border bg-gray-800/50 border-gray-600 text-gray-400"
             >
               {isTerminalMode ? (
-                <MessageSquare className="h-5 w-5" />
+                <MessageSquare size={20} />
               ) : (
-                <Terminal className="h-5 w-5" />
+                <Terminal size={20} />
               )}
             </button>
-
-            <button className="p-2 rounded-lg bg-gray-800/50 border border-gray-600 text-gray-400 hover:border-purple-400 hover:text-purple-400 transition-all duration-300">
-              <Settings className="h-5 w-5" />
+            <button
+              onClick={onOpenSettings}
+              className="p-2 rounded-lg border bg-gray-800/50 border-gray-600 text-gray-400"
+            >
+              <Settings size={20} />
             </button>
           </div>
         </div>

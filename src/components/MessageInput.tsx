@@ -1,145 +1,103 @@
-import React, { useState, useRef } from "react";
-import { Send, Paperclip, Code, Mic } from "lucide-react";
-import { FileUpload } from "../types";
+import React, { useState, useRef, useEffect } from "react";
+import { Send, Code, Mic } from "lucide-react";
 
 interface MessageInputProps {
-  onSendMessage: (content: string, files?: FileUpload[]) => void;
-  onToggleFileUpload: () => void;
-  uploadedFiles: FileUpload[];
+  onSendMessage: (content: string) => void;
 }
 
-const MessageInput: React.FC<MessageInputProps> = ({
-  onSendMessage,
-  onToggleFileUpload,
-  uploadedFiles,
-}) => {
+const MessageInput: React.FC<MessageInputProps> = ({ onSendMessage }) => {
   const [message, setMessage] = useState("");
   const [isRecording, setIsRecording] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const recognitionRef = useRef<any>(null);
+
+  useEffect(() => {
+    const SpeechRecognition =
+      window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (SpeechRecognition) {
+      recognitionRef.current = new SpeechRecognition();
+      recognitionRef.current.continuous = true;
+      recognitionRef.current.interimResults = true;
+      recognitionRef.current.lang = "id-ID";
+
+      recognitionRef.current.onresult = (event: any) => {
+        let interimTranscript = "";
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+          if (event.results[i].isFinal) {
+            onSendMessage(event.results[i][0].transcript);
+          } else {
+            interimTranscript += event.results[i][0].transcript;
+          }
+        }
+        setMessage(interimTranscript);
+      };
+
+      recognitionRef.current.onerror = (event: any) => {
+        console.error("Speech recognition error", event.error);
+        setIsRecording(false);
+      };
+
+      recognitionRef.current.onend = () => {
+        setIsRecording(false);
+      };
+    }
+  }, [onSendMessage]);
+
+  const handleToggleRecording = () => {
+    if (isRecording) {
+      recognitionRef.current?.stop();
+    } else {
+      recognitionRef.current?.start();
+    }
+    setIsRecording(!isRecording);
+    if ("vibrate" in navigator) navigator.vibrate(50);
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (message.trim() || uploadedFiles.length > 0) {
-      onSendMessage(
-        message.trim(),
-        uploadedFiles.length > 0 ? uploadedFiles : undefined
-      );
+    if (message.trim()) {
+      onSendMessage(message.trim());
       setMessage("");
-
-      if (textareaRef.current) {
-        textareaRef.current.style.height = "auto";
-      }
+      if (textareaRef.current) textareaRef.current.style.height = "auto";
     }
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleSubmit(e);
-    }
-  };
-
-  const adjustTextareaHeight = () => {
-    if (textareaRef.current) {
-      textareaRef.current.style.height = "auto";
-      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
-    }
-  };
-
-  const handleCodeButtonClick = () => {
-    const textarea = textareaRef.current;
-    if (!textarea) return;
-
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const selectedText = message.substring(start, end);
-    const codeBlock = "```javascript\n" + selectedText + "\n```";
-
-    setMessage(
-      message.substring(0, start) + codeBlock + message.substring(end)
-    );
-
-    textarea.focus();
-    setTimeout(() => {
-      textarea.selectionStart = start + 4;
-      textarea.selectionEnd = start + 4 + selectedText.length;
-    }, 0);
   };
 
   return (
-    <div className="p-4 space-y-3">
-      {uploadedFiles.length > 0 && (
-        <div className="flex flex-wrap gap-2">
-          {uploadedFiles.map((file) => (
-            <div
-              key={file.id}
-              className="flex items-center space-x-2 px-3 py-1 bg-gray-800/50 border border-cyan-400/30 rounded-full text-xs"
-            >
-              <span className="text-cyan-400">{file.name}</span>
-            </div>
-          ))}
-        </div>
-      )}
-
+    <div className="p-2 sm:p-4">
       <form onSubmit={handleSubmit} className="relative">
-        <div className="relative bg-gray-800/50 backdrop-blur-sm border border-gray-600/50 rounded-2xl transition-all duration-300 focus-within:border-cyan-400/50 focus-within:shadow-cyan-400/20 focus-within:shadow-lg">
-          <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-cyan-400/0 via-cyan-400/20 to-purple-400/0 opacity-0 transition-opacity duration-300 pointer-events-none group-focus-within:opacity-100"></div>
-
-          <div className="flex items-end space-x-3 p-3">
-            <div className="flex space-x-2">
-              <button
-                type="button"
-                onClick={onToggleFileUpload}
-                className="p-2 text-gray-400 hover:text-cyan-400 hover:bg-cyan-400/10 rounded-lg transition-all duration-200"
-                title="Attach files"
-              >
-                <Paperclip className="h-5 w-5" />
-              </button>
-
-              <button
-                type="button"
-                onClick={handleCodeButtonClick}
-                className="p-2 text-gray-400 hover:text-green-400 hover:bg-green-400/10 rounded-lg transition-all duration-200"
-                title="Insert code block"
-              >
-                <Code className="h-5 w-5" />
-              </button>
-            </div>
-
+        <div className="relative bg-gray-800/50 backdrop-blur-sm border border-gray-600/50 rounded-2xl">
+          <div className="flex items-end space-x-2 p-2">
             <textarea
               ref={textareaRef}
               value={message}
-              onChange={(e) => {
-                setMessage(e.target.value);
-                adjustTextareaHeight();
-              }}
-              onKeyDown={handleKeyDown}
-              placeholder="Type your message or upload an image..."
-              className="flex-1 bg-transparent text-white placeholder-gray-400 resize-none outline-none font-mono text-sm max-h-32 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-gray-600"
+              onChange={(e) => setMessage(e.target.value)}
+              onKeyDown={(e) =>
+                e.key === "Enter" && !e.shiftKey && handleSubmit(e)
+              }
+              placeholder="Ketik pesan..."
+              className="flex-1 bg-transparent text-white placeholder-gray-400 resize-none outline-none font-mono text-sm max-h-32 p-2"
               rows={1}
             />
-
-            <div className="flex space-x-2">
-              <button
-                type="button"
-                onClick={() => setIsRecording(!isRecording)}
-                className={`p-2 rounded-lg transition-all duration-200 ${
-                  isRecording
-                    ? "text-red-400 bg-red-400/20 animate-pulse"
-                    : "text-gray-400 hover:text-purple-400 hover:bg-purple-400/10"
-                }`}
-                title={isRecording ? "Stop recording" : "Voice input"}
-              >
-                <Mic className="h-5 w-5" />
-              </button>
-
+            <div className="flex space-x-1">
+              {recognitionRef.current && (
+                <button
+                  type="button"
+                  onClick={handleToggleRecording}
+                  className={`p-2 rounded-lg ${
+                    isRecording
+                      ? "text-red-400 bg-red-400/20 animate-pulse"
+                      : "text-gray-400"
+                  }`}
+                >
+                  <Mic size={20} />
+                </button>
+              )}
               <button
                 type="submit"
-                disabled={!message.trim() && uploadedFiles.length === 0}
-                className="p-2 rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed enabled:text-cyan-400 enabled:bg-cyan-400/20 enabled:hover:bg-cyan-400/30 enabled:shadow-cyan-400/50 enabled:shadow-lg"
-                title="Send message"
+                disabled={!message.trim()}
+                className="p-2 rounded-lg disabled:opacity-50 text-cyan-400 bg-cyan-400/20"
               >
-                <Send className="h-5 w-5" />
+                <Send size={20} />
               </button>
             </div>
           </div>
