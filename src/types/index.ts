@@ -28,7 +28,7 @@ export interface AppSettings {
   soundEnabled: boolean;
   glitchEffects: boolean;
   model: string;
-  systemPrompt: string; // <-- BARIS BARU
-  temperature: number; // <-- BARIS BARU
-  apiKey: string | null; // <-- BARIS BARU
+  systemPrompt: string;
+  temperature: number;
+  // apiKey: string | null; <-- BARIS DIHAPUS
 }

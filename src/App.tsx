@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import Header from "./components/Header";
 import ChatInterface from "./components/ChatInterface";
 import TerminalMode from "./components/TerminalMode";
@@ -7,14 +7,21 @@ import MusicPlayerBubble from "./components/MusicPlayerBubble";
 import MusicPlayerModal from "./components/MusicPlayerModal";
 import SettingsModal from "./components/SettingsModal";
 import { Message, AppSettings, MessagePart } from "./types";
-import { GoogleGenerativeAI, Content, Part } from "@google/generative-ai";
+import {
+  GoogleGenerativeAI,
+  Content,
+  Part,
+  GenerationConfig,
+  SafetySetting,
+  HarmCategory,
+} from "@google/generative-ai";
 import ReactPlayer from "react-player";
 import { fileToGenerativePart } from "./utils/fileUtils";
 
+// --- API KEY SUDAH TERPASANG LANGSUNG ---
 const API_KEY =
   import.meta.env.VITE_GEMINI_API_KEY ||
-  "AIzaSyAQMDd0Ts64TNUTLuiTrBNMWmWF217RUFk"; // Ganti dengan Kunci API Anda atau gunakan .env
-const genAI = new GoogleGenerativeAI(API_KEY);
+  "AIzaSyAQMDd0Ts64TNUTLuiTrBNMWmWF217RUFk";
 
 function App() {
   const initialWelcomeMessage: Message = {
@@ -33,12 +40,28 @@ function App() {
   const [messages, setMessages] = useState<Message[]>([initialWelcomeMessage]);
   const [hasShownWelcome, setHasShownWelcome] = useState(true);
 
-  const [settings, setSettings] = useState<AppSettings>({
-    isTerminalMode: false,
-    soundEnabled: true,
-    glitchEffects: true,
-    model: "models/gemini-2.5-flash",
+  const [settings, setSettings] = useState<AppSettings>(() => {
+    const savedSettings = localStorage.getItem("hawai-settings");
+    const defaults: Omit<AppSettings, "apiKey"> = {
+      // Omit apiKey dari defaults
+      isTerminalMode: false,
+      soundEnabled: true,
+      glitchEffects: true,
+      model: "models/gemini-2.5-flash", // Model default diubah ke salah satu pilihan baru
+      systemPrompt: "You are HAWAI, a helpful and futuristic AI assistant.",
+      temperature: 0.7,
+    };
+    return savedSettings
+      ? { ...defaults, ...JSON.parse(savedSettings) }
+      : defaults;
   });
+
+  useEffect(() => {
+    localStorage.setItem("hawai-settings", JSON.stringify(settings));
+  }, [settings]);
+
+  // genAI sekarang hanya bergantung pada API_KEY yang sudah di-hardcode
+  const genAI = useMemo(() => new GoogleGenerativeAI(API_KEY), []);
 
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [isMusicModalOpen, setIsMusicModalOpen] = useState(false);
@@ -64,20 +87,6 @@ function App() {
     }
   }, [error]);
 
-  const buildHistory = (): Content[] => {
-    const history: Content[] = [];
-    messages.slice(-6).forEach((message) => {
-      const parts: Part[] = message.parts.map((part) => ({
-        text: part.content,
-      }));
-      history.push({
-        role: message.sender === "user" ? "user" : "model",
-        parts: parts,
-      });
-    });
-    return history;
-  };
-
   const handleSendMessage = async (parts: MessagePart[]) => {
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -95,10 +104,35 @@ function App() {
     setIsStreaming(true);
 
     try {
-      const model = genAI.getGenerativeModel({ model: settings.model });
+      const model = genAI.getGenerativeModel({
+        model: settings.model,
+        systemInstruction: settings.systemPrompt,
+      });
+
+      const generationConfig: GenerationConfig = {
+        temperature: settings.temperature,
+      };
+
+      const safetySettings: SafetySetting[] = [
+        {
+          category: HarmCategory.HARM_CATEGORY_HARASSMENT,
+          threshold: "BLOCK_NONE",
+        },
+        {
+          category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
+          threshold: "BLOCK_NONE",
+        },
+        {
+          category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
+          threshold: "BLOCK_NONE",
+        },
+        {
+          category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
+          threshold: "BLOCK_NONE",
+        },
+      ];
 
       const promptParts: (string | Part)[] = [];
-
       for (const part of parts) {
         if (part.type === "text") {
           promptParts.push(part.content);
@@ -113,7 +147,17 @@ function App() {
         }
       }
 
-      const result = await model.generateContentStream(promptParts);
+      const history = messages.slice(0, -2).map((m) => ({
+        role: m.sender === "user" ? "user" : "model",
+        parts: m.parts.map((p) => ({ text: p.content })),
+      }));
+
+      const chat = model.startChat({
+        history,
+        generationConfig,
+        safetySettings,
+      });
+      const result = await chat.sendMessageStream(promptParts);
 
       let accumulatedText = "";
       for await (const chunk of result.stream) {
@@ -185,7 +229,6 @@ function App() {
           isTerminalMode={settings.isTerminalMode}
           onOpenSettings={() => setIsSettingsModalOpen(true)}
         />
-        {/* --- PERUBAHAN UTAMA ADA DI BARIS INI --- */}
         <main className="flex-1 flex flex-col overflow-y-auto pt-16">
           {settings.isTerminalMode ? (
             <TerminalMode
