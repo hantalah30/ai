@@ -1,3 +1,5 @@
+// src/App.tsx
+
 import React, { useState, useEffect, useMemo } from "react";
 import Header from "./components/Header";
 import ChatInterface from "./components/ChatInterface";
@@ -6,7 +8,7 @@ import DataStream from "./components/DataStream";
 import MusicPlayerBubble from "./components/MusicPlayerBubble";
 import MusicPlayerModal from "./components/MusicPlayerModal";
 import SettingsModal from "./components/SettingsModal";
-import { Message, AppSettings, MessagePart, Track } from "./types";
+import { Message, AppSettings, MessagePart, Track } from "./types"; // Import Track
 import {
   GoogleGenerativeAI,
   Content,
@@ -91,8 +93,26 @@ function App() {
   const [isStreaming, setIsStreaming] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Definisikan daftar lagu awal di sini
+  const initialLocalTracks: Track[] = [
+    {
+      id: "local-track-1",
+      url: "/audio/Bergema Sampai Selamanya - Nadhif Basalamah  Lirik Lagu - Indolirik.mp3", // Ganti dengan jalur berkas audio Anda
+      title: "Bergema Sampai Selamanya",
+      isLocal: true,
+    },
+    {
+      id: "local-track-2",
+      url: "/audio/.Feast - Nina (Official Lyric Video) - .Feast.mp3", // Ganti dengan jalur berkas audio Anda
+      title: ".Feast - Nina",
+      isLocal: true,
+    },
+    // Tambahkan lebih banyak lagu lokal di sini sesuai kebutuhan
+  ];
+
   // State untuk pemutar musik dan playlist
-  const [playlist, setPlaylist] = useState<Track[]>([]);
+  // Gunakan initialLocalTracks sebagai nilai awal untuk playlist
+  const [playlist, setPlaylist] = useState<Track[]>(initialLocalTracks);
   const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -246,11 +266,13 @@ function App() {
     localStorage.removeItem("hawai-chat-history");
   };
 
+  // Modifikasi handleAddToQueue untuk mendukung berkas lokal
   const handleAddToQueue = (track: Omit<Track, "id">) => {
     const newTrack = { ...track, id: Date.now().toString() };
     setPlaylist((currentPlaylist) => {
       const newPlaylist = [...currentPlaylist, newTrack];
-      if (newPlaylist.length === 1) {
+      if (newPlaylist.length === 1 && !isPlaying) {
+        // Mulai otomatis jika ini lagu pertama dan belum diputar
         setCurrentTrackIndex(0);
         setIsPlaying(true);
         setIsLoading(true);
@@ -261,7 +283,30 @@ function App() {
 
   const handleUrlSubmit = (url: string) => {
     setIsLoading(true);
+    // Untuk URL YouTube, kita masih perlu inspeksi judul
     setPendingTrackUrl(url);
+  };
+
+  // Handler baru untuk berkas audio lokal (ini masih akan berguna untuk unggahan dinamis)
+  const handleLocalFileSubmit = (files: File[]) => {
+    const newTracks: Track[] = files.map((file) => ({
+      id: Date.now().toString() + "-" + file.name, // ID unik
+      url: URL.createObjectURL(file), // Buat URL objek untuk berkas lokal
+      title: file.name, // Gunakan nama berkas sebagai judul
+      isLocal: true, // Tandai sebagai berkas lokal
+    }));
+
+    setPlaylist((currentPlaylist) => {
+      const updatedPlaylist = [...currentPlaylist, ...newTracks];
+      if (currentPlaylist.length === 0 && newTracks.length > 0) {
+        // Jika playlist kosong dan ada berkas baru ditambahkan, mulai putar yang pertama
+        setCurrentTrackIndex(0);
+        setIsPlaying(true);
+        setIsLoading(true);
+      }
+      return updatedPlaylist;
+    });
+    setIsMusicModalOpen(false); // Tutup modal setelah menambahkan berkas
   };
 
   const handleInspectorReady = (player: any) => {
@@ -312,22 +357,47 @@ function App() {
     const trackIndex = playlist.findIndex((track) => track.id === trackId);
     if (trackIndex === -1) return;
 
+    // Jika trek yang dihapus sedang diputar, pastikan pemutaran beralih dengan benar
     if (trackIndex === currentTrackIndex) {
       if (playlist.length === 1) {
+        // Jika hanya ada 1 trek dan dihapus
         setPlaylist([]);
         setIsPlaying(false);
         setCurrentTrackIndex(0);
+        // Penting: Hapus juga URL.createObjectURL jika ini berkas lokal
+        if (
+          playlist[trackIndex].isLocal &&
+          playlist[trackIndex].url.startsWith("blob:")
+        ) {
+          URL.revokeObjectURL(playlist[trackIndex].url);
+        }
         return;
       }
+      // Jika trek yang dihapus adalah yang terakhir, pindah ke yang sebelumnya
       if (trackIndex === playlist.length - 1) {
         setCurrentTrackIndex((prev) => prev - 1);
       }
+      // Jika tidak, tetap di indeks saat ini (yang akan menjadi trek berikutnya setelah penghapusan)
+      // Pemutaran akan berlanjut secara otomatis karena `currentTrackIndex` berubah
+      setIsLoading(true); // Set loading untuk trek baru
     } else if (trackIndex < currentTrackIndex) {
+      // Jika trek yang dihapus berada sebelum trek yang sedang diputar, sesuaikan indeks
       setCurrentTrackIndex((prev) => prev - 1);
     }
-    setPlaylist((currentPlaylist) =>
-      currentPlaylist.filter((track) => track.id !== trackId)
-    );
+
+    setPlaylist((currentPlaylist) => {
+      const newPlaylist = currentPlaylist.filter(
+        (track) => track.id !== trackId
+      );
+      // Hapus URL.createObjectURL jika ini berkas lokal
+      const removedTrack = currentPlaylist.find(
+        (track) => track.id === trackId
+      );
+      if (removedTrack?.isLocal && removedTrack?.url.startsWith("blob:")) {
+        URL.revokeObjectURL(removedTrack.url);
+      }
+      return newPlaylist;
+    });
   };
 
   const handleTogglePlay = () => {
@@ -391,6 +461,7 @@ function App() {
         isOpen={isMusicModalOpen}
         onClose={() => setIsMusicModalOpen(false)}
         onUrlSubmit={handleUrlSubmit}
+        onLocalFileSubmit={handleLocalFileSubmit} // Lewatkan handler baru
         playlist={playlist}
         activeTrackId={activeTrack?.id}
         isPlaying={isPlaying}
@@ -431,6 +502,7 @@ function App() {
             onError={(e) => {
               console.error("Player Error:", e);
               setError(`Failed to play: ${activeTrack.title}`);
+              // Coba putar trek berikutnya jika ada kesalahan
               playNext();
             }}
             config={{
@@ -442,7 +514,7 @@ function App() {
         </div>
       )}
 
-      {/* Player Inspeksi Tersembunyi untuk mengambil judul */}
+      {/* Player Inspeksi Tersembunyi untuk mengambil judul (Hanya untuk YouTube) */}
       {pendingTrackUrl && (
         <div style={{ display: "none" }}>
           <ReactPlayer
