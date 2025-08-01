@@ -13,36 +13,35 @@ const Header: React.FC<HeaderProps> = ({
 }) => {
   return (
     <header className="bg-gray-900/80 backdrop-blur-md border-b border-cyan-500/30 relative">
-      {/* Neon Border Effect */}
       <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-cyan-400 to-transparent"></div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo and Brand */}
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-2 sm:space-x-4">
             <div className="relative">
               <Zap className="h-8 w-8 text-cyan-400" />
               <div className="absolute inset-0 animate-ping">
                 <Zap className="h-8 w-8 text-cyan-400 opacity-20" />
               </div>
             </div>
-            <div>
+            <div className="hidden sm:block">
               <h1 className="text-xl font-bold bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
-                CyberAI
+                HAWAI
               </h1>
               <p className="text-xs text-gray-400 font-mono">
-                Neural Network v2.077
+                Neural Network v1.0
               </p>
             </div>
           </div>
 
           {/* AI Avatar */}
-          <div className="flex-1 flex justify-center">
+          <div className="flex-1 flex justify-center px-2">
             <AIAvatar />
           </div>
 
           {/* Controls */}
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-2 sm:space-x-4">
             <button
               onClick={onToggleTerminal}
               className={`p-2 rounded-lg border transition-all duration-300 ${

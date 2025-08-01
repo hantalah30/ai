@@ -16,7 +16,7 @@ function App() {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "1",
-      content: "Welcome to CyberAI. How can I assist you today?",
+      content: "Welcome to HAWAI. How can I assist you today?",
       sender: "ai",
       timestamp: new Date(),
     },
