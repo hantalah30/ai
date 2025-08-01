@@ -6,7 +6,7 @@ import DataStream from "./components/DataStream";
 import MusicPlayerBubble from "./components/MusicPlayerBubble";
 import MusicPlayerModal from "./components/MusicPlayerModal";
 import SettingsModal from "./components/SettingsModal";
-import { Message, AppSettings, MessagePart } from "./types";
+import { Message, AppSettings, MessagePart, Track } from "./types";
 import {
   GoogleGenerativeAI,
   Content,
@@ -16,9 +16,9 @@ import {
   HarmCategory,
 } from "@google/generative-ai";
 import ReactPlayer from "react-player";
-import { fileToGenerativePart } from "./utils/fileUtils";
+import { fileToGenerativePart, extractTextFromFile } from "./utils/fileUtils";
 
-// --- API KEY SUDAH TERPASANG LANGSUNG ---
+// --- Kunci API sudah terpasang ---
 const API_KEY =
   import.meta.env.VITE_GEMINI_API_KEY ||
   "AIzaSyAQMDd0Ts64TNUTLuiTrBNMWmWF217RUFk";
@@ -30,24 +30,48 @@ function App() {
       {
         type: "text",
         content:
-          "Welcome to HAWAI. How can I assist you today? You can now upload images and documents.",
+          "Welcome to HAWAI. How can I assist you today? You can now upload files and manage a music playlist.",
       },
     ],
     sender: "ai",
     timestamp: new Date(),
   };
 
-  const [messages, setMessages] = useState<Message[]>([initialWelcomeMessage]);
-  const [hasShownWelcome, setHasShownWelcome] = useState(true);
+  // --- FITUR: Manajemen Sesi Obrolan (Memuat Pesan) ---
+  const [messages, setMessages] = useState<Message[]>(() => {
+    try {
+      const savedMessages = localStorage.getItem("hawai-chat-history");
+      if (savedMessages) {
+        const parsedMessages = JSON.parse(savedMessages) as Message[];
+        return parsedMessages.map((msg) => ({
+          ...msg,
+          timestamp: new Date(msg.timestamp),
+        }));
+      }
+    } catch (error) {
+      console.error("Failed to load chat history from localStorage", error);
+    }
+    return [initialWelcomeMessage];
+  });
+
+  // --- FITUR: Manajemen Sesi Obrolan (Menyimpan Pesan) ---
+  useEffect(() => {
+    try {
+      localStorage.setItem("hawai-chat-history", JSON.stringify(messages));
+    } catch (error) {
+      console.error("Failed to save chat history to localStorage", error);
+    }
+  }, [messages]);
+
+  const [hasShownWelcome, setHasShownWelcome] = useState(messages.length <= 1);
 
   const [settings, setSettings] = useState<AppSettings>(() => {
     const savedSettings = localStorage.getItem("hawai-settings");
     const defaults: Omit<AppSettings, "apiKey"> = {
-      // Omit apiKey dari defaults
       isTerminalMode: false,
       soundEnabled: true,
       glitchEffects: true,
-      model: "models/gemini-2.5-flash", // Model default diubah ke salah satu pilihan baru
+      model: "models/gemini-1.5-flash",
       systemPrompt: "You are HAWAI, a helpful and futuristic AI assistant.",
       temperature: 0.7,
     };
@@ -60,19 +84,26 @@ function App() {
     localStorage.setItem("hawai-settings", JSON.stringify(settings));
   }, [settings]);
 
-  // genAI sekarang hanya bergantung pada API_KEY yang sudah di-hardcode
   const genAI = useMemo(() => new GoogleGenerativeAI(API_KEY), []);
 
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [isMusicModalOpen, setIsMusicModalOpen] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false);
-  const [playingUrl, setPlayingUrl] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  // State untuk pemutar musik dan playlist
+  const [playlist, setPlaylist] = useState<Track[]>([]);
+  const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [videoTitle, setVideoTitle] = useState("");
-  const [videoDuration, setVideoDuration] = useState(0);
   const [progress, setProgress] = useState({ playedSeconds: 0 });
-  const [error, setError] = useState<string | null>(null);
+  const activeTrack = useMemo(
+    () => playlist[currentTrackIndex],
+    [playlist, currentTrackIndex]
+  );
+
+  // State untuk inspeksi URL judul otomatis
+  const [pendingTrackUrl, setPendingTrackUrl] = useState<string | null>(null);
 
   useEffect(() => {
     if (error) {
@@ -133,24 +164,49 @@ function App() {
       ];
 
       const promptParts: (string | Part)[] = [];
+      let combinedText = "";
+
       for (const part of parts) {
         if (part.type === "text") {
-          promptParts.push(part.content);
-        } else if (part.content) {
+          combinedText += part.content + "\n";
+        } else if (part.content && part.mimeType) {
           const response = await fetch(part.content);
           const blob = await response.blob();
           const file = new File([blob], part.fileName || "file", {
             type: part.mimeType,
           });
-          const filePart = await fileToGenerativePart(file);
-          promptParts.push(filePart);
+
+          if (part.type === "image") {
+            const filePart = await fileToGenerativePart(file);
+            promptParts.push(filePart);
+          } else {
+            try {
+              const textContent = await extractTextFromFile(file);
+              combinedText += `\n--- START OF FILE: ${file.name} ---\n${textContent}\n--- END OF FILE: ${file.name} ---\n`;
+            } catch (e) {
+              console.warn(
+                `Could not extract text from ${file.name}, sending as file part.`
+              );
+              const filePart = await fileToGenerativePart(file);
+              promptParts.push(filePart);
+            }
+          }
         }
       }
 
-      const history = messages.slice(0, -2).map((m) => ({
-        role: m.sender === "user" ? "user" : "model",
-        parts: m.parts.map((p) => ({ text: p.content })),
-      }));
+      if (combinedText) {
+        promptParts.unshift(combinedText.trim());
+      }
+
+      const history = messages
+        .filter((m) => m.id !== "welcome")
+        .slice(0, -2)
+        .map((m) => ({
+          role: m.sender === "user" ? "user" : "model",
+          parts: m.parts
+            .filter((p) => p.type === "text")
+            .map((p) => ({ text: p.content })),
+        }));
 
       const chat = model.startChat({
         history,
@@ -184,32 +240,102 @@ function App() {
     }
   };
 
-  const handlePlayAudio = (url: string) => {
-    setPlayingUrl(url);
-    setIsPlaying(true);
-    setIsLoading(true);
-    setVideoTitle("Loading...");
-    setProgress({ playedSeconds: 0 });
+  const handleClearChat = () => {
+    setMessages([initialWelcomeMessage]);
+    setHasShownWelcome(true);
+    localStorage.removeItem("hawai-chat-history");
   };
-  const handleTogglePlay = () =>
-    playingUrl ? setIsPlaying(!isPlaying) : setIsMusicModalOpen(true);
-  const handlePlayerReady = (player: any) => {
+
+  const handleAddToQueue = (track: Omit<Track, "id">) => {
+    const newTrack = { ...track, id: Date.now().toString() };
+    setPlaylist((currentPlaylist) => {
+      const newPlaylist = [...currentPlaylist, newTrack];
+      if (newPlaylist.length === 1) {
+        setCurrentTrackIndex(0);
+        setIsPlaying(true);
+        setIsLoading(true);
+      }
+      return newPlaylist;
+    });
+  };
+
+  const handleUrlSubmit = (url: string) => {
+    setIsLoading(true);
+    setPendingTrackUrl(url);
+  };
+
+  const handleInspectorReady = (player: any) => {
+    if (!pendingTrackUrl) return;
     try {
-      setVideoDuration(player.getDuration());
       const internalPlayer = player.getInternalPlayer();
       const title =
-        internalPlayer?.videoTitle || internalPlayer?.title || "Unknown Title";
-      setVideoTitle(title);
-      setIsLoading(false);
+        internalPlayer?.videoTitle || internalPlayer?.title || "Untitled Track";
+      handleAddToQueue({ url: pendingTrackUrl, title });
     } catch (e) {
-      setVideoTitle("Unknown Title");
-      setIsLoading(false);
+      console.error("Failed to inspect URL:", e);
+      handleAddToQueue({ url: pendingTrackUrl, title: "Untitled Track" });
+    } finally {
+      setPendingTrackUrl(null);
+      if (!isPlaying) {
+        setIsLoading(false);
+      }
     }
   };
 
-  const handleClearTerminal = () => {
-    setMessages([initialWelcomeMessage]);
-    setHasShownWelcome(true);
+  const playNext = () => {
+    if (currentTrackIndex < playlist.length - 1) {
+      setCurrentTrackIndex((prev) => prev + 1);
+      setIsPlaying(true);
+      setIsLoading(true);
+    } else {
+      setIsPlaying(false);
+    }
+  };
+
+  const playPrevious = () => {
+    if (currentTrackIndex > 0) {
+      setCurrentTrackIndex((prev) => prev - 1);
+      setIsPlaying(true);
+      setIsLoading(true);
+    }
+  };
+
+  const playTrackAtIndex = (index: number) => {
+    if (index >= 0 && index < playlist.length) {
+      setCurrentTrackIndex(index);
+      setIsPlaying(true);
+      setIsLoading(true);
+    }
+  };
+
+  const removeTrack = (trackId: string) => {
+    const trackIndex = playlist.findIndex((track) => track.id === trackId);
+    if (trackIndex === -1) return;
+
+    if (trackIndex === currentTrackIndex) {
+      if (playlist.length === 1) {
+        setPlaylist([]);
+        setIsPlaying(false);
+        setCurrentTrackIndex(0);
+        return;
+      }
+      if (trackIndex === playlist.length - 1) {
+        setCurrentTrackIndex((prev) => prev - 1);
+      }
+    } else if (trackIndex < currentTrackIndex) {
+      setCurrentTrackIndex((prev) => prev - 1);
+    }
+    setPlaylist((currentPlaylist) =>
+      currentPlaylist.filter((track) => track.id !== trackId)
+    );
+  };
+
+  const handleTogglePlay = () => {
+    if (playlist.length > 0) {
+      setIsPlaying(!isPlaying);
+    } else {
+      setIsMusicModalOpen(true);
+    }
   };
 
   return (
@@ -236,7 +362,7 @@ function App() {
               onSendMessage={(text) =>
                 handleSendMessage([{ type: "text", content: text }])
               }
-              onClearTerminal={handleClearTerminal}
+              onClearTerminal={handleClearChat}
             />
           ) : (
             <ChatInterface
@@ -253,9 +379,9 @@ function App() {
       <MusicPlayerBubble
         isPlaying={isPlaying}
         isLoading={isLoading}
-        isLoaded={!!playingUrl}
-        title={videoTitle}
-        duration={videoDuration}
+        isLoaded={playlist.length > 0}
+        title={activeTrack?.title || "No track playing"}
+        duration={activeTrack?.duration || 0}
         progress={progress.playedSeconds}
         onTogglePlay={handleTogglePlay}
         onOpenModal={() => setIsMusicModalOpen(true)}
@@ -264,7 +390,15 @@ function App() {
       <MusicPlayerModal
         isOpen={isMusicModalOpen}
         onClose={() => setIsMusicModalOpen(false)}
-        onPlay={handlePlayAudio}
+        onUrlSubmit={handleUrlSubmit}
+        playlist={playlist}
+        activeTrackId={activeTrack?.id}
+        isPlaying={isPlaying}
+        onPlayTrackAtIndex={playTrackAtIndex}
+        onRemoveTrack={removeTrack}
+        onPlayNext={playNext}
+        onPlayPrevious={playPrevious}
+        onTogglePlay={handleTogglePlay}
       />
 
       <SettingsModal
@@ -272,35 +406,54 @@ function App() {
         onClose={() => setIsSettingsModalOpen(false)}
         settings={settings}
         onSettingsChange={setSettings}
-        onClearChat={() => {
-          setMessages([initialWelcomeMessage]);
-          setHasShownWelcome(true);
-        }}
+        onClearChat={handleClearChat}
       />
 
-      {playingUrl && (
+      {/* Player Utama untuk memutar musik */}
+      {activeTrack && (
         <div style={{ display: "none" }}>
           <ReactPlayer
-            url={playingUrl}
+            url={activeTrack.url}
             playing={isPlaying}
-            onReady={handlePlayerReady}
+            onReady={(player) => {
+              setIsLoading(false);
+              const duration = player.getDuration();
+              if (duration) {
+                setPlaylist((currentPlaylist) =>
+                  currentPlaylist.map((t) =>
+                    t.id === activeTrack.id ? { ...t, duration } : t
+                  )
+                );
+              }
+            }}
             onProgress={setProgress}
+            onEnded={playNext}
             onError={(e) => {
               console.error("Player Error:", e);
-              setError(
-                "Failed to play audio. The link might be invalid or restricted."
-              );
-            }}
-            onEnded={() => {
-              setPlayingUrl(null);
-              setIsPlaying(false);
+              setError(`Failed to play: ${activeTrack.title}`);
+              playNext();
             }}
             config={{
               youtube: {
-                playerVars: {
-                  origin: window.location.origin,
-                },
+                playerVars: { origin: window.location.origin },
               },
+            }}
+          />
+        </div>
+      )}
+
+      {/* Player Inspeksi Tersembunyi untuk mengambil judul */}
+      {pendingTrackUrl && (
+        <div style={{ display: "none" }}>
+          <ReactPlayer
+            url={pendingTrackUrl}
+            playing={false}
+            onReady={handleInspectorReady}
+            onError={(e) => {
+              console.error("Inspector player error:", e);
+              setError(`Could not fetch info for the provided URL.`);
+              setPendingTrackUrl(null);
+              setIsLoading(false);
             }}
           />
         </div>

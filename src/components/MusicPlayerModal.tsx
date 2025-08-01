@@ -1,16 +1,42 @@
 import React, { useState } from "react";
-import { X, Youtube, Play } from "lucide-react";
+import { Track } from "../types";
+import {
+  Play,
+  Pause,
+  X,
+  SkipBack,
+  SkipForward,
+  Music,
+  ListMusic,
+  Trash2,
+} from "lucide-react";
 
 interface MusicPlayerModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onPlay: (url: string) => void;
+  onUrlSubmit: (url: string) => void;
+  playlist: Track[];
+  activeTrackId?: string;
+  isPlaying: boolean;
+  onPlayTrackAtIndex: (index: number) => void;
+  onRemoveTrack: (trackId: string) => void;
+  onPlayNext: () => void;
+  onPlayPrevious: () => void;
+  onTogglePlay: () => void;
 }
 
 const MusicPlayerModal: React.FC<MusicPlayerModalProps> = ({
   isOpen,
   onClose,
-  onPlay,
+  onUrlSubmit,
+  playlist,
+  activeTrackId,
+  isPlaying,
+  onPlayTrackAtIndex,
+  onRemoveTrack,
+  onPlayNext,
+  onPlayPrevious,
+  onTogglePlay,
 }) => {
   const [url, setUrl] = useState("");
 
@@ -18,52 +44,126 @@ const MusicPlayerModal: React.FC<MusicPlayerModalProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (url.trim()) {
-      onPlay(url);
-      setUrl("");
-      onClose();
+    if (url) {
+      // Panggil onUrlSubmit untuk memulai proses inspeksi judul
+      onUrlSubmit(url);
+      setUrl(""); // Kosongkan input setelah submit
     }
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-gray-900/95 border border-purple-400/30 rounded-2xl w-full max-w-md backdrop-blur-sm transform transition-all duration-300 scale-100 opacity-100">
-        <div className="flex items-center justify-between p-6 border-b border-purple-400/20">
-          <div className="flex items-center space-x-3">
-            <Youtube className="h-6 w-6 text-red-500" />
-            <h2 className="text-xl font-bold text-purple-400 font-mono">
-              Play YouTube Audio
-            </h2>
-          </div>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-red-400 transition-colors duration-200"
-          >
-            <X className="h-6 w-6" />
-          </button>
-        </div>
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2 font-mono">
-              YouTube URL
-            </label>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md animate-fade-in">
+      <div className="bg-gray-900 border border-cyan-500/30 rounded-lg shadow-2xl shadow-cyan-500/20 w-full max-w-lg p-6 relative m-4">
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors"
+        >
+          <X size={24} />
+        </button>
+        <h2 className="text-2xl font-bold text-white mb-4 flex items-center gap-3 font-mono">
+          <Music className="text-cyan-400" />
+          Music Player
+        </h2>
+
+        {/* Form sekarang hanya membutuhkan URL */}
+        <form onSubmit={handleSubmit} className="mb-6">
+          <div className="space-y-3">
             <input
               type="text"
               value={url}
               onChange={(e) => setUrl(e.target.value)}
-              placeholder="https://www.youtube.com/watch?v=..."
-              className="w-full bg-gray-800/50 border border-gray-600/50 rounded-lg px-3 py-2 text-gray-100 font-mono focus:border-purple-400/50 focus:outline-none"
+              placeholder="Enter YouTube URL to fetch title automatically"
+              className="w-full p-2 bg-gray-800 text-white rounded border border-gray-700 focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 outline-none transition-all"
             />
           </div>
           <button
             type="submit"
-            disabled={!url.trim()}
-            className="w-full flex items-center justify-center px-4 py-2 rounded-lg font-mono transition-all duration-200 bg-gradient-to-r from-purple-500/20 to-pink-500/20 border border-purple-400/50 text-purple-400 hover:bg-purple-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full mt-4 p-2 bg-cyan-600 text-white font-bold rounded hover:bg-cyan-500 transition-colors"
           >
-            <Play className="h-5 w-5 mr-2" />
-            Play Audio
+            Add to Queue
           </button>
         </form>
+
+        {/* Tampilan Playlist */}
+        <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
+          <h3 className="text-lg font-semibold text-gray-300 flex items-center gap-2 font-mono mb-3">
+            <ListMusic className="text-cyan-400" />
+            Playlist
+          </h3>
+          {playlist.length > 0 ? (
+            playlist.map((track, index) => (
+              <div
+                key={track.id}
+                onClick={() => onPlayTrackAtIndex(index)}
+                className={`flex justify-between items-center p-3 rounded-lg cursor-pointer transition-all duration-200 group ${
+                  track.id === activeTrackId
+                    ? "bg-cyan-500/20 text-cyan-300"
+                    : "hover:bg-gray-800/60"
+                }`}
+              >
+                <div className="flex items-center gap-4 truncate">
+                  {track.id === activeTrackId && isPlaying ? (
+                    <Play
+                      size={16}
+                      className="text-cyan-400 animate-pulse flex-shrink-0"
+                    />
+                  ) : (
+                    <Music
+                      size={16}
+                      className="text-gray-500 group-hover:text-cyan-400 flex-shrink-0"
+                    />
+                  )}
+                  <span className="truncate">{track.title}</span>
+                </div>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onRemoveTrack(track.id);
+                  }}
+                  className="text-gray-500 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                  title={`Remove ${track.title}`}
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
+            ))
+          ) : (
+            <p className="text-gray-500 text-center py-4">
+              Playlist is empty. Add a song to start.
+            </p>
+          )}
+        </div>
+
+        {/* Kontrol Player */}
+        {playlist.length > 0 && (
+          <div className="mt-6 flex justify-center items-center gap-6">
+            <button
+              onClick={onPlayPrevious}
+              className="text-gray-400 hover:text-white transition-colors"
+              title="Previous Track"
+            >
+              <SkipBack size={28} />
+            </button>
+            <button
+              onClick={onTogglePlay}
+              className="text-white bg-cyan-600 rounded-full p-4 hover:bg-cyan-500 shadow-lg shadow-cyan-500/30 transition-all transform hover:scale-110"
+              title={isPlaying ? "Pause" : "Play"}
+            >
+              {isPlaying ? (
+                <Pause size={32} className="translate-x-0" />
+              ) : (
+                <Play size={32} className="translate-x-0.5" />
+              )}
+            </button>
+            <button
+              onClick={onPlayNext}
+              className="text-gray-400 hover:text-white transition-colors"
+              title="Next Track"
+            >
+              <SkipForward size={28} />
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

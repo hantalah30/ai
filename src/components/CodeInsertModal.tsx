@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import { X, Code, FileText, Plus } from "lucide-react";
+import { X, Code, FileText, Plus, Play } from "lucide-react";
+import LivePreview from "./LivePreview";
 
 interface CodeInsertModalProps {
   isOpen: boolean;
@@ -15,6 +16,7 @@ const CodeInsertModal: React.FC<CodeInsertModalProps> = ({
   const [code, setCode] = useState("");
   const [language, setLanguage] = useState("javascript");
   const [filename, setFilename] = useState("");
+  const [showPreview, setShowPreview] = useState(false);
 
   const languages = [
     { value: "javascript", label: "JavaScript", icon: "🟨" },
@@ -42,6 +44,10 @@ const CodeInsertModal: React.FC<CodeInsertModalProps> = ({
 
   const insertTemplate = (template: string) => {
     setCode(template);
+  };
+
+  const handleRunCode = () => {
+    setShowPreview(!showPreview);
   };
 
   const templates = {
@@ -165,6 +171,12 @@ if __name__ == "__main__":
               style={{ fontFamily: "JetBrains Mono, monospace" }}
             />
           </div>
+
+          {showPreview && (
+            <div className="mt-4">
+              <LivePreview code={code} language={language} />
+            </div>
+          )}
         </div>
 
         {/* Footer */}
@@ -174,6 +186,13 @@ if __name__ == "__main__":
             className="px-4 py-2 bg-gray-800/50 border border-gray-600/50 rounded-lg text-gray-300 hover:border-red-400/50 hover:text-red-400 transition-all duration-200 font-mono"
           >
             Cancel
+          </button>
+          <button
+            onClick={handleRunCode}
+            className="px-4 py-2 bg-gray-800/50 border border-gray-600/50 rounded-lg text-gray-300 hover:border-green-400/50 hover:text-green-400 transition-all duration-200 font-mono"
+          >
+            <Play className="h-4 w-4 mr-2" />
+            Run Code
           </button>
           <button
             onClick={handleInsert}

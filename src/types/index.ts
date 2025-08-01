@@ -1,10 +1,18 @@
 // src/types/index.ts
 
+// Tambahkan tipe Track
+export interface Track {
+  id: string;
+  url: string;
+  title: string;
+  duration?: number;
+}
+
 export interface MessagePart {
   type: "text" | "image" | "file";
   content: string;
-  mimeType?: string;
   fileName?: string;
+  mimeType?: string;
 }
 
 export interface Message {
@@ -14,15 +22,6 @@ export interface Message {
   timestamp: Date;
 }
 
-export interface FileUpload {
-  id: string;
-  name: string;
-  type: string;
-  size: number;
-  url: string;
-  content?: string;
-}
-
 export interface AppSettings {
   isTerminalMode: boolean;
   soundEnabled: boolean;
@@ -30,5 +29,4 @@ export interface AppSettings {
   model: string;
   systemPrompt: string;
   temperature: number;
-  // apiKey: string | null; <-- BARIS DIHAPUS
 }
