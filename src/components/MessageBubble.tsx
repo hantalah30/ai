@@ -70,11 +70,10 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isLatest }) => {
       }`}
     >
       <div
-        className={`flex items-start space-x-3 max-w-3xl ${
+        className={`flex items-start space-x-3 max-w-3xl w-full ${
           isUser ? "flex-row-reverse space-x-reverse" : ""
         }`}
       >
-        {/* Avatar */}
         <div
           className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center border ${
             isUser
@@ -89,9 +88,10 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isLatest }) => {
           )}
         </div>
 
-        {/* Message Content */}
         <div
-          className={`relative group ${isUser ? "text-right" : "text-left"}`}
+          className={`relative group w-full ${
+            isUser ? "text-right" : "text-left"
+          }`}
         >
           <div
             className={`relative px-4 py-3 rounded-2xl backdrop-blur-sm border transition-all duration-300 ${
@@ -108,30 +108,30 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isLatest }) => {
               }`}
             ></div>
 
-            <div className="relative text-sm font-mono leading-relaxed">
+            <div className="prose prose-sm prose-invert max-w-none font-mono leading-relaxed text-left">
               <ReactMarkdown components={{ code: CodeBlock }}>
                 {message.content}
               </ReactMarkdown>
-
-              {message.files && message.files.length > 0 && (
-                <div className="mt-3 space-y-2">
-                  {message.files.map((file) => (
-                    <div
-                      key={file.id}
-                      className="flex items-center space-x-2 p-2 bg-gray-800/50 rounded-lg border border-gray-600/50"
-                    >
-                      <FileText className="h-4 w-4 text-green-400" />
-                      <span className="text-xs text-gray-300 truncate">
-                        {file.name}
-                      </span>
-                      <span className="text-xs text-gray-500">
-                        ({(file.size / 1024).toFixed(1)}KB)
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
             </div>
+
+            {message.files && message.files.length > 0 && (
+              <div className="mt-3 space-y-2">
+                {message.files.map((file) => (
+                  <div
+                    key={file.id}
+                    className="flex items-center space-x-2 p-2 bg-gray-800/50 rounded-lg border border-gray-600/50"
+                  >
+                    <FileText className="h-4 w-4 text-green-400" />
+                    <span className="text-xs text-gray-300 truncate">
+                      {file.name}
+                    </span>
+                    <span className="text-xs text-gray-500">
+                      ({(file.size / 1024).toFixed(1)}KB)
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
 
             <div
               className={`absolute -top-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 ${

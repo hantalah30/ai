@@ -19,7 +19,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (message.trim()) {
+    if (message.trim() || uploadedFiles.length > 0) {
       onSendMessage(
         message.trim(),
         uploadedFiles.length > 0 ? uploadedFiles : undefined
@@ -53,7 +53,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
     const start = textarea.selectionStart;
     const end = textarea.selectionEnd;
     const selectedText = message.substring(start, end);
-    const codeBlock = "```\n" + selectedText + "\n```";
+    const codeBlock = "```javascript\n" + selectedText + "\n```";
 
     setMessage(
       message.substring(0, start) + codeBlock + message.substring(end)
@@ -61,8 +61,8 @@ const MessageInput: React.FC<MessageInputProps> = ({
 
     textarea.focus();
     setTimeout(() => {
-      textarea.selectionStart = start + 3;
-      textarea.selectionEnd = start + 3 + selectedText.length;
+      textarea.selectionStart = start + 4;
+      textarea.selectionEnd = start + 4 + selectedText.length;
     }, 0);
   };
 
@@ -100,7 +100,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
                 type="button"
                 onClick={handleCodeButtonClick}
                 className="p-2 text-gray-400 hover:text-green-400 hover:bg-green-400/10 rounded-lg transition-all duration-200"
-                title="Insert code"
+                title="Insert code block"
               >
                 <Code className="h-5 w-5" />
               </button>
@@ -114,7 +114,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
                 adjustTextareaHeight();
               }}
               onKeyDown={handleKeyDown}
-              placeholder="Type your message... (Enter to send, Shift+Enter for new line)"
+              placeholder="Type your message or upload an image..."
               className="flex-1 bg-transparent text-white placeholder-gray-400 resize-none outline-none font-mono text-sm max-h-32 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-gray-600"
               rows={1}
             />
@@ -135,12 +135,8 @@ const MessageInput: React.FC<MessageInputProps> = ({
 
               <button
                 type="submit"
-                disabled={!message.trim()}
-                className={`p-2 rounded-lg transition-all duration-200 ${
-                  message.trim()
-                    ? "text-cyan-400 bg-cyan-400/20 hover:bg-cyan-400/30 shadow-cyan-400/50 shadow-lg"
-                    : "text-gray-500 cursor-not-allowed"
-                }`}
+                disabled={!message.trim() && uploadedFiles.length === 0}
+                className="p-2 rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed enabled:text-cyan-400 enabled:bg-cyan-400/20 enabled:hover:bg-cyan-400/30 enabled:shadow-cyan-400/50 enabled:shadow-lg"
                 title="Send message"
               >
                 <Send className="h-5 w-5" />

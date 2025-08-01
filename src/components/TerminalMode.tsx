@@ -20,12 +20,10 @@ const TerminalMode: React.FC<TerminalModeProps> = ({
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    // Scroll ke bawah saat ada pesan baru
     terminalEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isTyping]);
 
   useEffect(() => {
-    // Auto-focus input
     inputRef.current?.focus();
   }, []);
 
@@ -62,7 +60,6 @@ const TerminalMode: React.FC<TerminalModeProps> = ({
 
   return (
     <div className="flex-1 bg-black/90 backdrop-blur-sm border border-green-400/30 rounded-lg m-4 font-mono text-sm flex flex-col">
-      {/* Terminal Header */}
       <div className="bg-gray-800/50 border-b border-green-400/30 px-4 py-2 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center space-x-2">
           <Terminal className="h-4 w-4 text-green-400" />
@@ -74,7 +71,6 @@ const TerminalMode: React.FC<TerminalModeProps> = ({
         </div>
       </div>
 
-      {/* Terminal Content - Scrollable */}
       <div className="flex-1 overflow-y-auto p-4 space-y-2">
         <div className="text-green-400 mb-4">
           <div className="animate-typewriter">
@@ -107,24 +103,12 @@ const TerminalMode: React.FC<TerminalModeProps> = ({
         {isTyping && (
           <div className="text-green-400 ml-4 flex items-center space-x-1">
             <span className="text-yellow-400">[AI-PROCESSING]</span>
-            <div className="flex space-x-1">
-              {[...Array(3)].map((_, i) => (
-                <div
-                  key={i}
-                  className="w-1 h-1 bg-green-400 rounded-full animate-bounce"
-                  style={{
-                    animationDelay: `${i * 200}ms`,
-                    animationDuration: "1s",
-                  }}
-                />
-              ))}
-            </div>
+            {/* ... (typing indicator dots) */}
           </div>
         )}
         <div ref={terminalEndRef} />
       </div>
 
-      {/* Input Line - Fixed at the bottom */}
       <div className="p-4 border-t border-green-400/30">
         <form onSubmit={handleSubmit} className="flex items-center space-x-2">
           <span className="text-purple-400">user@cyberai:~$</span>
@@ -141,7 +125,6 @@ const TerminalMode: React.FC<TerminalModeProps> = ({
         </form>
       </div>
 
-      {/* Scan Lines */}
       <div className="absolute inset-0 pointer-events-none">
         <div className="h-full w-full bg-gradient-to-b from-green-400/5 via-transparent to-green-400/5 animate-scan-lines"></div>
       </div>
