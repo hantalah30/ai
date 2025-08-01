@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { X, Code, FileText, Plus } from 'lucide-react';
+import React, { useState } from "react";
+import { X, Code, FileText, Plus } from "lucide-react";
 
 interface CodeInsertModalProps {
   isOpen: boolean;
@@ -10,32 +10,32 @@ interface CodeInsertModalProps {
 const CodeInsertModal: React.FC<CodeInsertModalProps> = ({
   isOpen,
   onClose,
-  onInsert
+  onInsert,
 }) => {
-  const [code, setCode] = useState('');
-  const [language, setLanguage] = useState('javascript');
-  const [filename, setFilename] = useState('');
+  const [code, setCode] = useState("");
+  const [language, setLanguage] = useState("javascript");
+  const [filename, setFilename] = useState("");
 
   const languages = [
-    { value: 'javascript', label: 'JavaScript', icon: '🟨' },
-    { value: 'typescript', label: 'TypeScript', icon: '🔷' },
-    { value: 'python', label: 'Python', icon: '🐍' },
-    { value: 'html', label: 'HTML', icon: '🌐' },
-    { value: 'css', label: 'CSS', icon: '🎨' },
-    { value: 'json', label: 'JSON', icon: '📋' },
-    { value: 'sql', label: 'SQL', icon: '🗄️' },
-    { value: 'bash', label: 'Bash', icon: '⚡' },
-    { value: 'php', label: 'PHP', icon: '🐘' },
-    { value: 'java', label: 'Java', icon: '☕' },
-    { value: 'cpp', label: 'C++', icon: '⚙️' },
-    { value: 'text', label: 'Plain Text', icon: '📄' }
+    { value: "javascript", label: "JavaScript", icon: "🟨" },
+    { value: "typescript", label: "TypeScript", icon: "🔷" },
+    { value: "python", label: "Python", icon: "🐍" },
+    { value: "html", label: "HTML", icon: "🌐" },
+    { value: "css", label: "CSS", icon: "🎨" },
+    { value: "json", label: "JSON", icon: "📋" },
+    { value: "sql", label: "SQL", icon: "🗄️" },
+    { value: "bash", label: "Bash", icon: "⚡" },
+    { value: "php", label: "PHP", icon: "🐘" },
+    { value: "java", label: "Java", icon: "☕" },
+    { value: "cpp", label: "C++", icon: "⚙️" },
+    { value: "text", label: "Plain Text", icon: "📄" },
   ];
 
   const handleInsert = () => {
     if (code.trim()) {
       onInsert(code, language, filename || undefined);
-      setCode('');
-      setFilename('');
+      setCode("");
+      setFilename("");
       onClose();
     }
   };
@@ -76,7 +76,7 @@ if __name__ == "__main__":
   color: white;
   padding: 20px;
   border-radius: 8px;
-}`
+}`,
   };
 
   if (!isOpen) return null;
@@ -88,7 +88,9 @@ if __name__ == "__main__":
         <div className="flex items-center justify-between p-6 border-b border-cyan-400/20">
           <div className="flex items-center space-x-3">
             <Code className="h-6 w-6 text-cyan-400" />
-            <h2 className="text-xl font-bold text-cyan-400 font-mono">Insert Code Block</h2>
+            <h2 className="text-xl font-bold text-cyan-400 font-mono">
+              Insert Code Block
+            </h2>
           </div>
           <button
             onClick={onClose}
@@ -144,7 +146,7 @@ if __name__ == "__main__":
                   onClick={() => insertTemplate(template)}
                   className="px-3 py-1 bg-gray-800/50 border border-gray-600/50 rounded-lg text-xs text-gray-300 hover:border-purple-400/50 hover:text-purple-400 transition-all duration-200 font-mono"
                 >
-                  {languages.find(l => l.value === lang)?.icon} {lang}
+                  {languages.find((l) => l.value === lang)?.icon} {lang}
                 </button>
               ))}
             </div>
@@ -160,7 +162,7 @@ if __name__ == "__main__":
               onChange={(e) => setCode(e.target.value)}
               placeholder="Enter your code here..."
               className="w-full h-64 bg-gray-800/50 border border-gray-600/50 rounded-lg p-4 text-gray-100 font-mono text-sm resize-none focus:border-cyan-400/50 focus:outline-none scrollbar-thin scrollbar-track-gray-800 scrollbar-thumb-cyan-500/50"
-              style={{ fontFamily: 'JetBrains Mono, monospace' }}
+              style={{ fontFamily: "JetBrains Mono, monospace" }}
             />
           </div>
         </div>
@@ -178,8 +180,8 @@ if __name__ == "__main__":
             disabled={!code.trim()}
             className={`px-4 py-2 rounded-lg font-mono transition-all duration-200 ${
               code.trim()
-                ? 'bg-gradient-to-r from-cyan-500/20 to-purple-500/20 border border-cyan-400/50 text-cyan-400 hover:bg-cyan-500/30'
-                : 'bg-gray-800/50 border border-gray-600/50 text-gray-500 cursor-not-allowed'
+                ? "bg-gradient-to-r from-cyan-500/20 to-purple-500/20 border border-cyan-400/50 text-cyan-400 hover:bg-cyan-500/30"
+                : "bg-gray-800/50 border border-gray-600/50 text-gray-500 cursor-not-allowed"
             }`}
           >
             Insert Code

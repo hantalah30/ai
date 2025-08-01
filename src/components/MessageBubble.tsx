@@ -1,16 +1,20 @@
 import React, { useState, useEffect } from "react";
 import { User, Bot, Copy, FileText } from "lucide-react";
 import ReactMarkdown from "react-markdown";
-import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
-import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
 import { Message } from "../types";
+import CodeBlock from "./CodeBlock";
 
 interface MessageBubbleProps {
   message: Message;
   isLatest: boolean;
+  isStreaming?: boolean; // Prop baru untuk status streaming
 }
 
-const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isLatest }) => {
+const MessageBubble: React.FC<MessageBubbleProps> = ({
+  message,
+  isLatest,
+  isStreaming,
+}) => {
   const [isVisible, setIsVisible] = useState(false);
   const isUser = message.sender === "user";
 
@@ -26,39 +30,26 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isLatest }) => {
     navigator.clipboard.writeText(text);
   };
 
-  const CodeBlock = ({ node, inline, className, children, ...props }: any) => {
-    const match = /language-(\w+)/.exec(className || "");
-    const codeText = String(children).replace(/\n$/, "");
+  const renderers = {
+    code({ node, inline, className, children, ...props }: any) {
+      const match = /language-(\w+)/.exec(className || "");
+      const codeText = String(children).replace(/\n$/, "");
 
-    return !inline && match ? (
-      <div className="relative my-2 rounded-lg bg-gray-900/80 border border-gray-700">
-        <div className="flex items-center justify-between px-4 py-1 bg-gray-800/50 border-b border-gray-700">
-          <span className="text-xs font-mono text-gray-400">{match[1]}</span>
-          <button
-            onClick={() => copyToClipboard(codeText)}
-            className="p-1 text-gray-400 hover:text-cyan-400"
-            title="Copy code"
-          >
-            <Copy className="h-3 w-3" />
-          </button>
-        </div>
-        <SyntaxHighlighter
-          style={vscDarkPlus}
-          language={match[1]}
-          PreTag="div"
+      if (!inline && match) {
+        return (
+          <CodeBlock code={codeText} language={match[1]} isEditable={false} />
+        );
+      }
+
+      return (
+        <code
+          className="px-1 py-0.5 font-mono text-sm bg-gray-700/50 rounded-md"
           {...props}
         >
-          {codeText}
-        </SyntaxHighlighter>
-      </div>
-    ) : (
-      <code
-        className="px-1 py-0.5 font-mono text-sm bg-gray-700/50 rounded-md"
-        {...props}
-      >
-        {children}
-      </code>
-    );
+          {children}
+        </code>
+      );
+    },
   };
 
   return (
@@ -109,9 +100,13 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isLatest }) => {
             ></div>
 
             <div className="prose prose-sm prose-invert max-w-none font-mono leading-relaxed text-left">
-              <ReactMarkdown components={{ code: CodeBlock }}>
+              <ReactMarkdown components={renderers}>
                 {message.content}
               </ReactMarkdown>
+              {/* Menambahkan kursor berkedip saat streaming */}
+              {isStreaming && (
+                <span className="inline-block w-2 h-4 bg-cyan-400 animate-pulse ml-1"></span>
+              )}
             </div>
 
             {message.files && message.files.length > 0 && (

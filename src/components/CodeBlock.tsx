@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { atomDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
-import { Copy, Edit3, Check, X, Save, Code, FileText } from 'lucide-react';
+import React, { useState } from "react";
+import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
+import { atomDark } from "react-syntax-highlighter/dist/esm/styles/prism";
+import { Copy, Edit3, Check, X, Save, Code, FileText } from "lucide-react";
 
 interface CodeBlockProps {
   code: string;
@@ -16,7 +16,7 @@ const CodeBlock: React.FC<CodeBlockProps> = ({
   language,
   filename,
   onCodeUpdate,
-  isEditable = true
+  isEditable = true,
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editedCode, setEditedCode] = useState(code);
@@ -28,7 +28,7 @@ const CodeBlock: React.FC<CodeBlockProps> = ({
       setIsCopied(true);
       setTimeout(() => setIsCopied(false), 2000);
     } catch (err) {
-      console.error('Failed to copy code:', err);
+      console.error("Failed to copy code:", err);
     }
   };
 
@@ -46,20 +46,20 @@ const CodeBlock: React.FC<CodeBlockProps> = ({
 
   const getLanguageIcon = (lang: string) => {
     const langLower = lang.toLowerCase();
-    if (['js', 'javascript', 'ts', 'typescript'].includes(langLower)) {
-      return '🟨';
-    } else if (['py', 'python'].includes(langLower)) {
-      return '🐍';
-    } else if (['html', 'xml'].includes(langLower)) {
-      return '🌐';
-    } else if (['css', 'scss', 'sass'].includes(langLower)) {
-      return '🎨';
-    } else if (['json'].includes(langLower)) {
-      return '📋';
-    } else if (['sql'].includes(langLower)) {
-      return '🗄️';
+    if (["js", "javascript", "ts", "typescript"].includes(langLower)) {
+      return "🟨";
+    } else if (["py", "python"].includes(langLower)) {
+      return "🐍";
+    } else if (["html", "xml"].includes(langLower)) {
+      return "🌐";
+    } else if (["css", "scss", "sass"].includes(langLower)) {
+      return "🎨";
+    } else if (["json"].includes(langLower)) {
+      return "📋";
+    } else if (["sql"].includes(langLower)) {
+      return "🗄️";
     }
-    return '📄';
+    return "📄";
   };
 
   return (
@@ -68,15 +68,19 @@ const CodeBlock: React.FC<CodeBlockProps> = ({
       <div className="flex items-center justify-between px-4 py-2 bg-gray-800/50 border-b border-cyan-400/20">
         <div className="flex items-center space-x-2">
           <span className="text-lg">{getLanguageIcon(language)}</span>
-          <span className="text-sm font-mono text-cyan-400">{language.toUpperCase()}</span>
+          <span className="text-sm font-mono text-cyan-400">
+            {language.toUpperCase()}
+          </span>
           {filename && (
             <>
               <span className="text-gray-500">•</span>
-              <span className="text-sm font-mono text-gray-300">{filename}</span>
+              <span className="text-sm font-mono text-gray-300">
+                {filename}
+              </span>
             </>
           )}
         </div>
-        
+
         <div className="flex items-center space-x-2">
           {isEditable && !isEditing && (
             <button
@@ -87,7 +91,7 @@ const CodeBlock: React.FC<CodeBlockProps> = ({
               <Edit3 className="h-4 w-4" />
             </button>
           )}
-          
+
           {isEditing ? (
             <div className="flex items-center space-x-1">
               <button
@@ -110,12 +114,16 @@ const CodeBlock: React.FC<CodeBlockProps> = ({
               onClick={handleCopy}
               className={`p-1.5 rounded transition-all duration-200 ${
                 isCopied
-                  ? 'text-green-400 bg-green-400/10'
-                  : 'text-gray-400 hover:text-cyan-400 hover:bg-cyan-400/10'
+                  ? "text-green-400 bg-green-400/10"
+                  : "text-gray-400 hover:text-cyan-400 hover:bg-cyan-400/10"
               }`}
-              title={isCopied ? 'Copied!' : 'Copy code'}
+              title={isCopied ? "Copied!" : "Copy code"}
             >
-              {isCopied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+              {isCopied ? (
+                <Check className="h-4 w-4" />
+              ) : (
+                <Copy className="h-4 w-4" />
+              )}
             </button>
           )}
         </div>
@@ -128,7 +136,7 @@ const CodeBlock: React.FC<CodeBlockProps> = ({
             value={editedCode}
             onChange={(e) => setEditedCode(e.target.value)}
             className="w-full h-64 p-4 bg-gray-900 text-gray-100 font-mono text-sm resize-none outline-none border-none scrollbar-thin scrollbar-track-gray-800 scrollbar-thumb-cyan-500/50"
-            style={{ fontFamily: 'JetBrains Mono, monospace' }}
+            style={{ fontFamily: "JetBrains Mono, monospace" }}
           />
         ) : (
           <SyntaxHighlighter
@@ -136,17 +144,17 @@ const CodeBlock: React.FC<CodeBlockProps> = ({
             style={atomDark}
             customStyle={{
               margin: 0,
-              padding: '1rem',
-              background: 'transparent',
-              fontSize: '0.875rem',
-              fontFamily: 'JetBrains Mono, monospace',
+              padding: "1rem",
+              background: "transparent",
+              fontSize: "0.875rem",
+              fontFamily: "JetBrains Mono, monospace",
             }}
             showLineNumbers={true}
             lineNumberStyle={{
-              color: '#4B5563',
-              fontSize: '0.75rem',
-              paddingRight: '1rem',
-              userSelect: 'none'
+              color: "#4B5563",
+              fontSize: "0.75rem",
+              paddingRight: "1rem",
+              userSelect: "none",
             }}
           >
             {code}
@@ -160,7 +168,7 @@ const CodeBlock: React.FC<CodeBlockProps> = ({
       {/* Line Count */}
       <div className="px-4 py-1 bg-gray-800/30 border-t border-gray-700/50">
         <span className="text-xs text-gray-500 font-mono">
-          {code.split('\n').length} lines • {code.length} characters
+          {code.split("\n").length} lines • {code.length} characters
         </span>
       </div>
     </div>

@@ -6,8 +6,8 @@ import DataStream from "./components/DataStream";
 import { Message, FileUpload } from "./types";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-// PERINGATAN: Sangat disarankan untuk memindahkan kunci ini ke lingkungan sisi server
-// atau gunakan metode yang aman untuk menanganinya, daripada menampilkannya di kode sisi klien.
+// PERINGATAN: Kunci API ini seharusnya tidak diekspos di sisi klien.
+// Gunakan variabel lingkungan atau backend proxy untuk keamanan.
 const API_KEY = "AIzaSyAQMDd0Ts64TNUTLuiTrBNMWmWF217RUFk";
 
 const genAI = new GoogleGenerativeAI(API_KEY);
@@ -22,12 +22,10 @@ function App() {
     },
   ]);
   const [isTerminalMode, setIsTerminalMode] = useState(false);
-  const [isTyping, setIsTyping] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<FileUpload[]>([]);
 
   useEffect(() => {
-    // Add ambient cyberpunk background sounds would go here
-    // Also initialize any audio context for UI sounds
+    // Logika untuk suara ambient atau inisialisasi audio bisa diletakkan di sini
   }, []);
 
   const handleSendMessage = async (content: string, files?: FileUpload[]) => {
@@ -39,40 +37,62 @@ function App() {
       files,
     };
 
-    setMessages((currentMessages) => [...currentMessages, userMessage]);
-    setIsTyping(true);
+    const aiMessagePlaceholder: Message = {
+      id: (Date.now() + 1).toString(),
+      content: "",
+      sender: "ai",
+      timestamp: new Date(),
+    };
+
+    setMessages((currentMessages) => [
+      ...currentMessages,
+      userMessage,
+      aiMessagePlaceholder,
+    ]);
 
     try {
-      // Menggunakan model 'gemini-1.0-pro-latest' sebagai upaya terakhir yang paling stabil.
       const model = genAI.getGenerativeModel({
-        model: "gemini-2.5-pro",
+        model: "gemini-2.5-pro", // Mempertahankan model sesuai permintaan
       });
-      const result = await model.generateContent(content);
-      const response = await result.response;
-      const text = response.text();
 
-      const aiResponse: Message = {
-        id: (Date.now() + 1).toString(),
-        content: text,
-        sender: "ai",
-        timestamp: new Date(),
-      };
+      // Perbaikan: `generateContentStream` mengembalikan objek, kita butuh properti `.stream`
+      const result = await model.generateContentStream(content);
+      const stream = result.stream;
 
-      setMessages((currentMessages) => [...currentMessages, aiResponse]);
+      let accumulatedText = "";
+      for await (const chunk of stream) {
+        // Pastikan chunk dan text() ada sebelum diakses
+        const chunkText = chunk.text ? chunk.text() : "";
+        accumulatedText += chunkText;
+
+        setMessages((currentMessages) => {
+          const newMessages = [...currentMessages];
+          const aiMessageIndex = newMessages.findIndex(
+            (msg) => msg.id === aiMessagePlaceholder.id
+          );
+          if (aiMessageIndex !== -1) {
+            newMessages[aiMessageIndex].content = accumulatedText;
+          }
+          return newMessages;
+        });
+      }
     } catch (error) {
       console.error("Gemini API Error:", error);
-
       const errorMessage =
         error instanceof Error ? error.message : "An unknown error occurred.";
-      const aiResponse: Message = {
-        id: (Date.now() + 1).toString(),
-        content: `Sorry, there was an error connecting to the neural network. Please check the browser console (F12) for more details.\n\n**Error:** \`${errorMessage}\``,
-        sender: "ai",
-        timestamp: new Date(),
-      };
-      setMessages((currentMessages) => [...currentMessages, aiResponse]);
-    } finally {
-      setIsTyping(false);
+
+      setMessages((currentMessages) => {
+        const newMessages = [...currentMessages];
+        const aiMessageIndex = newMessages.findIndex(
+          (msg) => msg.id === aiMessagePlaceholder.id
+        );
+        if (aiMessageIndex !== -1) {
+          newMessages[
+            aiMessageIndex
+          ].content = `Sorry, there was an error connecting to the neural network. Please check the browser console (F12) for more details.\n\n**Error:** \`${errorMessage}\``;
+        }
+        return newMessages;
+      });
     }
   };
 
@@ -80,46 +100,43 @@ function App() {
     setUploadedFiles((prev) => [...prev, ...files]);
   };
 
+  const handleUpdateMessage = (id: string, newContent: string) => {
+    setMessages(
+      messages.map((msg) =>
+        msg.id === id ? { ...msg, content: newContent } : msg
+      )
+    );
+  };
+
   return (
     <div className="min-h-screen bg-gray-900 relative">
-      {/* Animated Background */}
       <div className="fixed inset-0 bg-gradient-to-br from-gray-900 via-purple-900/20 to-blue-900/20"></div>
-
-      {/* Data Stream Background */}
       <DataStream />
-
-      {/* Scan Lines Effect */}
       <div className="fixed inset-0 pointer-events-none">
         <div className="h-full w-full opacity-5 bg-gradient-to-b from-transparent via-cyan-400/20 to-transparent animate-pulse"></div>
       </div>
-
-      {/* Main Content */}
       <div className="relative z-10 flex flex-col h-screen">
         <Header
           isTerminalMode={isTerminalMode}
           onToggleTerminal={() => setIsTerminalMode(!isTerminalMode)}
         />
-
         <main className="flex-1 flex flex-col overflow-y-auto">
           {isTerminalMode ? (
             <TerminalMode
               messages={messages}
               onSendMessage={handleSendMessage}
-              isTyping={isTyping}
             />
           ) : (
             <ChatInterface
               messages={messages}
               onSendMessage={handleSendMessage}
               onFileUpload={handleFileUpload}
-              isTyping={isTyping}
               uploadedFiles={uploadedFiles}
+              onUpdateMessage={handleUpdateMessage}
             />
           )}
         </main>
       </div>
-
-      {/* Glitch Effect Overlay */}
       <div className="fixed inset-0 pointer-events-none mix-blend-overlay opacity-10">
         <div className="glitch-overlay"></div>
       </div>

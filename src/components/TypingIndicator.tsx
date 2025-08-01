@@ -1,5 +1,5 @@
-import React from 'react';
-import { Bot } from 'lucide-react';
+import React from "react";
+import { Bot } from "lucide-react";
 
 const TypingIndicator: React.FC = () => {
   return (
@@ -19,7 +19,7 @@ const TypingIndicator: React.FC = () => {
                 className="w-2 h-2 bg-cyan-400 rounded-full animate-bounce"
                 style={{
                   animationDelay: `${i * 200}ms`,
-                  animationDuration: '1s'
+                  animationDuration: "1s",
                 }}
               />
             ))}

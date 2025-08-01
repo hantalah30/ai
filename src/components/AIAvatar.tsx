@@ -1,12 +1,12 @@
-import React, { useState, useEffect } from 'react';
-import { Brain, Cpu } from 'lucide-react';
+import React, { useState, useEffect } from "react";
+import { Brain, Cpu } from "lucide-react";
 
 const AIAvatar: React.FC = () => {
   const [isActive, setIsActive] = useState(false);
 
   useEffect(() => {
     const interval = setInterval(() => {
-      setIsActive(prev => !prev);
+      setIsActive((prev) => !prev);
     }, 3000);
 
     return () => clearInterval(interval);
@@ -17,12 +17,15 @@ const AIAvatar: React.FC = () => {
       {/* Holographic Ring */}
       <div className="absolute inset-0 rounded-full border-2 border-cyan-400/30 animate-spin-slow"></div>
       <div className="absolute inset-2 rounded-full border border-purple-400/40 animate-spin-reverse"></div>
-      
+
       {/* Avatar Container */}
-      <div className={`relative w-12 h-12 rounded-full bg-gradient-to-br from-cyan-400/20 via-purple-500/20 to-pink-400/20 backdrop-blur-sm border transition-all duration-1000 ${
-        isActive ? 'border-cyan-400 shadow-cyan-400/50 shadow-2xl' : 'border-purple-400/50'
-      }`}>
-        
+      <div
+        className={`relative w-12 h-12 rounded-full bg-gradient-to-br from-cyan-400/20 via-purple-500/20 to-pink-400/20 backdrop-blur-sm border transition-all duration-1000 ${
+          isActive
+            ? "border-cyan-400 shadow-cyan-400/50 shadow-2xl"
+            : "border-purple-400/50"
+        }`}
+      >
         {/* AI Core */}
         <div className="absolute inset-0 flex items-center justify-center">
           {isActive ? (
@@ -42,16 +45,18 @@ const AIAvatar: React.FC = () => {
                 top: `${20 + Math.sin(i * 60) * 15}%`,
                 left: `${50 + Math.cos(i * 60) * 15}%`,
                 animationDelay: `${i * 200}ms`,
-                animationDuration: '2s'
+                animationDuration: "2s",
               }}
             />
           ))}
         </div>
 
         {/* Glitch Effect */}
-        <div className={`absolute inset-0 rounded-full bg-gradient-to-br from-cyan-400/10 to-purple-400/10 ${
-          isActive ? 'animate-glitch' : ''
-        }`}></div>
+        <div
+          className={`absolute inset-0 rounded-full bg-gradient-to-br from-cyan-400/10 to-purple-400/10 ${
+            isActive ? "animate-glitch" : ""
+          }`}
+        ></div>
       </div>
 
       {/* Data Flow */}

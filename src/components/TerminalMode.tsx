@@ -5,13 +5,11 @@ import { Message } from "../types";
 interface TerminalModeProps {
   messages: Message[];
   onSendMessage: (content: string) => void;
-  isTyping: boolean;
 }
 
 const TerminalMode: React.FC<TerminalModeProps> = ({
   messages,
   onSendMessage,
-  isTyping,
 }) => {
   const [input, setInput] = useState("");
   const [commandHistory, setCommandHistory] = useState<string[]>([]);
@@ -20,8 +18,9 @@ const TerminalMode: React.FC<TerminalModeProps> = ({
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    terminalEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, isTyping]);
+    // Scroll to bottom as new content streams into the last message
+    terminalEndRef.current?.scrollIntoView({ behavior: "auto" });
+  }, [messages[messages.length - 1]?.content]);
 
   useEffect(() => {
     inputRef.current?.focus();
@@ -58,6 +57,10 @@ const TerminalMode: React.FC<TerminalModeProps> = ({
     }
   };
 
+  // Get the last message to check if it's an AI response being streamed
+  const lastMessage = messages[messages.length - 1];
+  const isAiStreaming = lastMessage && lastMessage.sender === "ai";
+
   return (
     <div className="flex-1 bg-black/90 backdrop-blur-sm border border-green-400/30 rounded-lg m-4 font-mono text-sm flex flex-col">
       <div className="bg-gray-800/50 border-b border-green-400/30 px-4 py-2 flex items-center justify-between flex-shrink-0">
@@ -92,20 +95,17 @@ const TerminalMode: React.FC<TerminalModeProps> = ({
                 {message.content}
               </div>
             ) : (
-              <div className="text-green-400 ml-4">
+              <div className="text-green-400">
                 <span className="text-yellow-400">[AI-RESPONSE]</span>{" "}
                 {message.content}
+                {/* Show cursor only on the last, streaming AI message */}
+                {isAiStreaming && message.id === lastMessage.id && (
+                  <span className="inline-block w-2 h-4 bg-green-400 animate-pulse ml-1"></span>
+                )}
               </div>
             )}
           </div>
         ))}
-
-        {isTyping && (
-          <div className="text-green-400 ml-4 flex items-center space-x-1">
-            <span className="text-yellow-400">[AI-PROCESSING]</span>
-            {/* ... (typing indicator dots) */}
-          </div>
-        )}
         <div ref={terminalEndRef} />
       </div>
 
