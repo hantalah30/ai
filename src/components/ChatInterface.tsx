@@ -1,12 +1,12 @@
 import React, { useState, useRef, useEffect } from "react";
 import MessageBubble from "./MessageBubble";
 import MessageInput from "./MessageInput";
-import { Message, FileUpload } from "../types";
+import { Message } from "../types";
 import { ArrowDownCircle } from "lucide-react";
 
 interface ChatInterfaceProps {
   messages: Message[];
-  onSendMessage: (content: string, files?: FileUpload[]) => void;
+  onSendMessage: (content: string) => void;
   isStreaming: boolean;
 }
 
@@ -24,15 +24,17 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   };
 
   useEffect(() => {
-    scrollToBottom();
-  }, [messages[messages.length - 1]?.content]);
+    // Hanya scroll otomatis jika pengguna sudah berada di bawah
+    if (!showScrollButton) {
+      scrollToBottom();
+    }
+  }, [messages[messages.length - 1]?.content, showScrollButton]);
 
   const handleScroll = () => {
     if (chatContainerRef.current) {
       const { scrollTop, scrollHeight, clientHeight } =
         chatContainerRef.current;
-      // Tampilkan tombol jika pengguna tidak berada di bagian paling bawah
-      setShowScrollButton(scrollHeight - scrollTop > clientHeight + 100);
+      setShowScrollButton(scrollHeight - scrollTop > clientHeight + 150);
     }
   };
 
@@ -61,9 +63,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       {showScrollButton && (
         <button
           onClick={() => scrollToBottom("smooth")}
-          className="absolute bottom-24 right-6 z-20 p-2 rounded-full bg-cyan-500/50 text-white backdrop-blur-md animate-bounce"
+          className="absolute bottom-24 right-4 sm:right-6 z-20 p-2 rounded-full bg-cyan-500/50 text-white backdrop-blur-md hover:bg-cyan-500/80 transition-colors"
         >
-          <ArrowDownCircle size={24} />
+          <ArrowDownCircle size={28} />
         </button>
       )}
 

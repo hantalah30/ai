@@ -1,123 +1,143 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Header from "./components/Header";
 import ChatInterface from "./components/ChatInterface";
 import TerminalMode from "./components/TerminalMode";
 import DataStream from "./components/DataStream";
 import MusicPlayerBubble from "./components/MusicPlayerBubble";
 import MusicPlayerModal from "./components/MusicPlayerModal";
-import { Message, FileUpload } from "./types";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import SettingsModal from "./components/SettingsModal";
+import { Message, AppSettings, MessagePart } from "./types";
+import { GoogleGenerativeAI, Content, Part } from "@google/generative-ai";
 import ReactPlayer from "react-player/youtube";
+import { fileToGenerativePart } from "./utils/fileUtils";
 
-const API_KEY = "AIzaSyAQMDd0Ts64TNUTLuiTrBNMWmWF217RUFk";
+const API_KEY =
+  import.meta.env.VITE_GEMINI_API_KEY ||
+  "AIzaSyAQMDd0Ts64TNUTLuiTrBNMWmWF217RUFk";
 const genAI = new GoogleGenerativeAI(API_KEY);
 
 function App() {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: "1",
-      content: "Welcome to HAWAI. How can I assist you today?",
-      sender: "ai",
-      timestamp: new Date(),
-    },
-  ]);
-  const [isTerminalMode, setIsTerminalMode] = useState(false);
-  const [uploadedFiles, setUploadedFiles] = useState<FileUpload[]>([]);
-  const [isStreaming, setIsStreaming] = useState(false);
+  const initialMessage: Message = {
+    id: "1",
+    parts: [
+      {
+        type: "text",
+        content:
+          "Welcome to HAWAI. How can I assist you today? You can now upload images and documents.",
+      },
+    ],
+    sender: "ai",
+    timestamp: new Date(),
+  };
 
-  // Music Player State
+  const [messages, setMessages] = useState<Message[]>([initialMessage]);
+
+  const [settings, setSettings] = useState<AppSettings>({
+    isTerminalMode: false,
+    soundEnabled: true,
+    glitchEffects: true,
+    model: "gemini-2.5-flash",
+  });
+
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [isMusicModalOpen, setIsMusicModalOpen] = useState(false);
+  const [isStreaming, setIsStreaming] = useState(false);
   const [playingUrl, setPlayingUrl] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [videoTitle, setVideoTitle] = useState("");
   const [videoDuration, setVideoDuration] = useState(0);
   const [progress, setProgress] = useState({ playedSeconds: 0 });
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSendMessage = async (content: string, files?: FileUpload[]) => {
+  useEffect(() => {
+    if (error) {
+      const errorMsg: Message = {
+        id: Date.now().toString(),
+        parts: [{ type: "text", content: `**Error:** ${error}` }],
+        sender: "ai",
+        timestamp: new Date(),
+      };
+      setMessages((current) => [...current, errorMsg]);
+      setError(null);
+    }
+  }, [error]);
+
+  const buildHistory = (): Content[] => {
+    const history: Content[] = [];
+    messages.slice(-6).forEach((message) => {
+      const parts: Part[] = message.parts.map((part) => ({
+        text: part.content,
+      }));
+      history.push({
+        role: message.sender === "user" ? "user" : "model",
+        parts: parts,
+      });
+    });
+    return history;
+  };
+
+  const handleSendMessage = async (parts: MessagePart[]) => {
     const userMessage: Message = {
       id: Date.now().toString(),
-      content,
+      parts,
       sender: "user",
       timestamp: new Date(),
-      files,
     };
-    const aiMessagePlaceholder: Message = {
+    const aiPlaceholder: Message = {
       id: (Date.now() + 1).toString(),
-      content: "",
+      parts: [{ type: "text", content: "" }],
       sender: "ai",
       timestamp: new Date(),
     };
-
-    setMessages((currentMessages) => [
-      ...currentMessages,
-      userMessage,
-      aiMessagePlaceholder,
-    ]);
+    setMessages((current) => [...current, userMessage, aiPlaceholder]);
     setIsStreaming(true);
 
     try {
-      const model = genAI.getGenerativeModel({
-        model: "gemini-2.5-pro",
-      });
-      const result = await model.generateContentStream(content);
-      const stream = result.stream;
+      const model = genAI.getGenerativeModel({ model: settings.model });
 
-      let accumulatedText = "";
-      let lastUpdateTime = 0;
-      const updateInterval = 50;
+      const promptParts: (string | Part)[] = [];
 
-      for await (const chunk of stream) {
-        const chunkText = chunk.text ? chunk.text() : "";
-        accumulatedText += chunkText;
-        const now = Date.now();
-        if (now - lastUpdateTime > updateInterval) {
-          setMessages((current) => {
-            const newMessages = [...current];
-            const idx = newMessages.findIndex(
-              (m) => m.id === aiMessagePlaceholder.id
-            );
-            if (idx !== -1) newMessages[idx].content = accumulatedText;
-            return newMessages;
+      for (const part of parts) {
+        if (part.type === "text") {
+          promptParts.push(part.content);
+        } else if (part.content) {
+          const response = await fetch(part.content);
+          const blob = await response.blob();
+          const file = new File([blob], part.fileName || "file", {
+            type: part.mimeType,
           });
-          lastUpdateTime = now;
+          const filePart = await fileToGenerativePart(file);
+          promptParts.push(filePart);
         }
       }
 
-      setMessages((current) => {
-        const newMessages = [...current];
-        const idx = newMessages.findIndex(
-          (m) => m.id === aiMessagePlaceholder.id
+      const result = await model.generateContentStream(promptParts);
+
+      let accumulatedText = "";
+      for await (const chunk of result.stream) {
+        const chunkText = chunk.text();
+        accumulatedText += chunkText;
+        setMessages((current) =>
+          current.map((m) =>
+            m.id === aiPlaceholder.id
+              ? { ...m, parts: [{ type: "text", content: accumulatedText }] }
+              : m
+          )
         );
-        if (idx !== -1) newMessages[idx].content = accumulatedText;
-        return newMessages;
-      });
-    } catch (error) {
-      console.error("Gemini API Error:", error);
+      }
+    } catch (e) {
+      console.error(e);
       const errorMessage =
-        error instanceof Error ? error.message : "An unknown error occurred.";
-      setMessages((current) => {
-        const newMessages = [...current];
-        const idx = newMessages.findIndex(
-          (m) => m.id === aiMessagePlaceholder.id
-        );
-        if (idx !== -1)
-          newMessages[idx].content = `**Error:** \`${errorMessage}\``;
-        return newMessages;
-      });
+        e instanceof Error ? e.message : "An unknown error occurred.";
+      setError(errorMessage);
+      setMessages((current) =>
+        current.filter((m) => m.id !== aiPlaceholder.id)
+      );
     } finally {
       setIsStreaming(false);
     }
   };
-
-  const handleFileUpload = (files: FileUpload[]) =>
-    setUploadedFiles((prev) => [...prev, ...files]);
-  const handleUpdateMessage = (id: string, newContent: string) =>
-    setMessages(
-      messages.map((msg) =>
-        msg.id === id ? { ...msg, content: newContent } : msg
-      )
-    );
 
   const handlePlayAudio = (url: string) => {
     setPlayingUrl(url);
@@ -126,68 +146,57 @@ function App() {
     setVideoTitle("Loading...");
     setProgress({ playedSeconds: 0 });
   };
-
   const handleTogglePlay = () =>
     playingUrl ? setIsPlaying(!isPlaying) : setIsMusicModalOpen(true);
-
   const handlePlayerReady = (player: any) => {
     try {
       setVideoDuration(player.getDuration());
       setVideoTitle(player.player.player.videoTitle);
       setIsLoading(false);
-    } catch (error) {
-      console.error("Failed to get player details:", error);
+    } catch (e) {
       setVideoTitle("Unknown Title");
       setIsLoading(false);
     }
   };
 
-  const handlePlayerError = (error: any) => {
-    console.error("ReactPlayer Error:", error);
-    setPlayingUrl(null);
-    setIsPlaying(false);
-    setIsLoading(false);
-    const errorMessage: Message = {
-      id: Date.now().toString(),
-      content: `❌ Failed to play audio.`,
-      sender: "ai",
-      timestamp: new Date(),
-    };
-    setMessages((current) => [...current, errorMessage]);
+  const handleClearTerminal = () => {
+    setMessages([initialMessage]); // Reset ke pesan awal
   };
 
   return (
     <div className="min-h-screen bg-gray-900 relative">
-      <div className="fixed inset-0 bg-gradient-to-br from-gray-900 via-purple-900/20 to-blue-900/20"></div>
-      <DataStream />
-      <div className="fixed inset-0 pointer-events-none">
-        <div className="h-full w-full opacity-5 bg-gradient-to-b from-transparent via-cyan-400/20 to-transparent animate-pulse"></div>
-      </div>
+      {settings.glitchEffects && (
+        <>
+          <div className="fixed inset-0 bg-gradient-to-br from-gray-900 via-purple-900/20 to-blue-900/20"></div>
+          <DataStream />
+        </>
+      )}
+
       <div className="relative z-10 flex flex-col h-screen">
         <Header
-          isTerminalMode={isTerminalMode}
-          onToggleTerminal={() => setIsTerminalMode(!isTerminalMode)}
+          onToggleTerminal={() =>
+            setSettings((s) => ({ ...s, isTerminalMode: !s.isTerminalMode }))
+          }
+          isTerminalMode={settings.isTerminalMode}
+          onOpenSettings={() => setIsSettingsModalOpen(true)}
         />
         <main className="flex-1 flex flex-col overflow-y-auto">
-          {isTerminalMode ? (
+          {settings.isTerminalMode ? (
             <TerminalMode
               messages={messages}
-              onSendMessage={handleSendMessage}
+              onSendMessage={(text) =>
+                handleSendMessage([{ type: "text", content: text }])
+              }
+              onClearTerminal={handleClearTerminal}
             />
           ) : (
             <ChatInterface
               messages={messages}
               onSendMessage={handleSendMessage}
-              onFileUpload={handleFileUpload}
-              uploadedFiles={uploadedFiles}
-              onUpdateMessage={handleUpdateMessage}
               isStreaming={isStreaming}
             />
           )}
         </main>
-      </div>
-      <div className="fixed inset-0 pointer-events-none mix-blend-overlay opacity-10">
-        <div className="glitch-overlay"></div>
       </div>
 
       <MusicPlayerBubble
@@ -207,6 +216,14 @@ function App() {
         onPlay={handlePlayAudio}
       />
 
+      <SettingsModal
+        isOpen={isSettingsModalOpen}
+        onClose={() => setIsSettingsModalOpen(false)}
+        settings={settings}
+        onSettingsChange={setSettings}
+        onClearChat={() => setMessages([initialMessage])}
+      />
+
       {playingUrl && (
         <div style={{ display: "none" }}>
           <ReactPlayer
@@ -214,14 +231,11 @@ function App() {
             playing={isPlaying}
             onReady={handlePlayerReady}
             onProgress={setProgress}
-            width="0"
-            height="0"
-            controls={false}
+            onError={() => setError("Failed to play audio.")}
             onEnded={() => {
               setPlayingUrl(null);
               setIsPlaying(false);
             }}
-            onError={handlePlayerError}
           />
         </div>
       )}

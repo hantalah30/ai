@@ -1,5 +1,5 @@
 import React from "react";
-import { X, Bot, Trash2, Sparkles, LayoutDashboard } from "lucide-react";
+import { X, Bot, Trash2, LayoutDashboard } from "lucide-react";
 import { AppSettings } from "../types";
 
 interface SettingsModalProps {
@@ -26,6 +26,17 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     }
   };
 
+  // Daftar model yang diperluas
+  const modelOptions = [
+    { id: "models/gemini-2.5-flash", name: "HAWAI 2.5 Flash" },
+
+    { id: "gemini-1.5-flash-8b-001", name: "HAWAI 1.5 Flash-8B" },
+    // Model HAWAI 2.0 & 2.5
+    { id: "gemini-2.5-pro", name: "HAWAI 2.5 Pro (Recommended)" },
+
+    { id: "gemini-2.0-flash-lite-001", name: "HAWAI 2.0 Flash-Lite" },
+  ];
+
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
       <div className="bg-gray-900/95 border border-purple-400/30 rounded-2xl w-full max-w-md">
@@ -49,16 +60,18 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
             <select
               value={settings.model}
               onChange={(e) =>
-                onSettingsChange({ ...settings, model: e.target.value })
+                onSettingsChange({
+                  ...settings,
+                  model: e.target.value as AppSettings["model"],
+                })
               }
               className="w-full bg-gray-800/50 border border-gray-600/50 rounded-lg px-3 py-2 text-gray-100 font-mono"
             >
-              <option value="gemini-1.5-pro-latest">
-                Gemini 1.5 Pro (Recommended)
-              </option>
-              <option value="gemini-1.5-flash-latest">
-                Gemini 1.5 Flash (Fast)
-              </option>
+              {modelOptions.map((opt) => (
+                <option key={opt.id} value={opt.id}>
+                  {opt.name}
+                </option>
+              ))}
             </select>
           </div>
 

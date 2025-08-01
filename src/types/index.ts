@@ -1,9 +1,18 @@
+// src/types/index.ts
+
+// Bagian dari sebuah pesan, bisa berupa teks atau file
+export interface MessagePart {
+  type: "text" | "image" | "file";
+  content: string; // Teks atau URL data untuk file
+  mimeType?: string; // Diperlukan untuk file
+  fileName?: string; // Nama file asli
+}
+
 export interface Message {
   id: string;
-  content: string;
+  parts: MessagePart[]; // Pesan sekarang terdiri dari beberapa bagian
   sender: "user" | "ai";
   timestamp: Date;
-  files?: FileUpload[];
 }
 
 export interface FileUpload {
@@ -11,13 +20,14 @@ export interface FileUpload {
   name: string;
   type: string;
   size: number;
-  url: string;
-  content?: string;
+  url: string; // URL pratinjau lokal
+  content?: string; // Konten file (misal: base64)
 }
 
 export interface AppSettings {
   isTerminalMode: boolean;
   soundEnabled: boolean;
+
   glitchEffects: boolean;
   model: string;
 }
