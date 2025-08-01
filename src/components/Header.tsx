@@ -14,7 +14,8 @@ const Header: React.FC<HeaderProps> = ({
   onOpenSettings,
 }) => {
   return (
-    <header className="bg-gray-900/80 backdrop-blur-md border-b border-cyan-500/30 relative">
+    // --- PERUBAHAN UTAMA ADA DI BARIS INI ---
+    <header className="fixed top-0 left-0 w-full z-50 bg-gray-900/80 backdrop-blur-md border-b border-cyan-500/30">
       <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center space-x-2 sm:space-x-4">

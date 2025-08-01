@@ -1,5 +1,3 @@
-// src/components/MessageBubble.tsx
-
 import React from "react";
 import { User, Bot, FileText } from "lucide-react";
 import ReactMarkdown from "react-markdown";
@@ -44,7 +42,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
         </div>
 
         <div
-          className={`relative group w-full ${
+          className={`flex flex-col flex-1 min-w-0 ${
             isUser ? "text-right" : "text-left"
           }`}
         >
@@ -55,7 +53,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
                 : "bg-gradient-to-br from-gray-800/80 to-gray-900/80 border-cyan-400/30 text-gray-100"
             }`}
           >
-            <div className="prose prose-sm prose-invert max-w-none font-mono leading-relaxed text-left space-y-2">
+            <div className="prose prose-sm prose-invert max-w-none font-mono leading-relaxed text-left space-y-2 break-words">
               {message.parts.map((part, index) => {
                 if (part.type === "text") {
                   return (
@@ -68,7 +66,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
                       key={index}
                       src={part.content}
                       alt="user upload"
-                      className="max-w-xs rounded-lg"
+                      className="max-w-full h-auto rounded-lg"
                     />
                   );
                 }

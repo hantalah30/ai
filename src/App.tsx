@@ -8,17 +8,17 @@ import MusicPlayerModal from "./components/MusicPlayerModal";
 import SettingsModal from "./components/SettingsModal";
 import { Message, AppSettings, MessagePart } from "./types";
 import { GoogleGenerativeAI, Content, Part } from "@google/generative-ai";
-import ReactPlayer from "react-player/youtube";
+import ReactPlayer from "react-player";
 import { fileToGenerativePart } from "./utils/fileUtils";
 
 const API_KEY =
   import.meta.env.VITE_GEMINI_API_KEY ||
-  "AIzaSyAQMDd0Ts64TNUTLuiTrBNMWmWF217RUFk";
+  "AIzaSyAQMDd0Ts64TNUTLuiTrBNMWmWF217RUFk"; // Ganti dengan Kunci API Anda atau gunakan .env
 const genAI = new GoogleGenerativeAI(API_KEY);
 
 function App() {
-  const initialMessage: Message = {
-    id: "1",
+  const initialWelcomeMessage: Message = {
+    id: "welcome",
     parts: [
       {
         type: "text",
@@ -30,13 +30,14 @@ function App() {
     timestamp: new Date(),
   };
 
-  const [messages, setMessages] = useState<Message[]>([initialMessage]);
+  const [messages, setMessages] = useState<Message[]>([initialWelcomeMessage]);
+  const [hasShownWelcome, setHasShownWelcome] = useState(true);
 
   const [settings, setSettings] = useState<AppSettings>({
     isTerminalMode: false,
     soundEnabled: true,
     glitchEffects: true,
-    model: "gemini-2.5-flash",
+    model: "models/gemini-2.5-flash",
   });
 
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
@@ -151,7 +152,10 @@ function App() {
   const handlePlayerReady = (player: any) => {
     try {
       setVideoDuration(player.getDuration());
-      setVideoTitle(player.player.player.videoTitle);
+      const internalPlayer = player.getInternalPlayer();
+      const title =
+        internalPlayer?.videoTitle || internalPlayer?.title || "Unknown Title";
+      setVideoTitle(title);
       setIsLoading(false);
     } catch (e) {
       setVideoTitle("Unknown Title");
@@ -160,7 +164,8 @@ function App() {
   };
 
   const handleClearTerminal = () => {
-    setMessages([initialMessage]); // Reset ke pesan awal
+    setMessages([initialWelcomeMessage]);
+    setHasShownWelcome(true);
   };
 
   return (
@@ -180,7 +185,8 @@ function App() {
           isTerminalMode={settings.isTerminalMode}
           onOpenSettings={() => setIsSettingsModalOpen(true)}
         />
-        <main className="flex-1 flex flex-col overflow-y-auto">
+        {/* --- PERUBAHAN UTAMA ADA DI BARIS INI --- */}
+        <main className="flex-1 flex flex-col overflow-y-auto pt-16">
           {settings.isTerminalMode ? (
             <TerminalMode
               messages={messages}
@@ -194,6 +200,8 @@ function App() {
               messages={messages}
               onSendMessage={handleSendMessage}
               isStreaming={isStreaming}
+              hasShownWelcome={hasShownWelcome}
+              setHasShownWelcome={setHasShownWelcome}
             />
           )}
         </main>
@@ -221,7 +229,10 @@ function App() {
         onClose={() => setIsSettingsModalOpen(false)}
         settings={settings}
         onSettingsChange={setSettings}
-        onClearChat={() => setMessages([initialMessage])}
+        onClearChat={() => {
+          setMessages([initialWelcomeMessage]);
+          setHasShownWelcome(true);
+        }}
       />
 
       {playingUrl && (
@@ -231,10 +242,22 @@ function App() {
             playing={isPlaying}
             onReady={handlePlayerReady}
             onProgress={setProgress}
-            onError={() => setError("Failed to play audio.")}
+            onError={(e) => {
+              console.error("Player Error:", e);
+              setError(
+                "Failed to play audio. The link might be invalid or restricted."
+              );
+            }}
             onEnded={() => {
               setPlayingUrl(null);
               setIsPlaying(false);
+            }}
+            config={{
+              youtube: {
+                playerVars: {
+                  origin: window.location.origin,
+                },
+              },
             }}
           />
         </div>
