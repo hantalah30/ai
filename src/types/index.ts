@@ -6,6 +6,14 @@ export interface Message {
   files?: FileUpload[];
   isCode?: boolean;
   language?: string;
+  codeBlocks?: CodeBlock[];
+}
+
+export interface CodeBlock {
+  id: string;
+  code: string;
+  language: string;
+  filename?: string;
 }
 
 export interface FileUpload {
