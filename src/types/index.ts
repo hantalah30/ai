@@ -6,6 +6,7 @@ export interface Track {
   url: string;
   title: string;
   duration?: number;
+  isLocal?: boolean; // Tambahkan ini jika belum ada
 }
 
 export interface MessagePart {
@@ -29,4 +30,6 @@ export interface AppSettings {
   model: string;
   systemPrompt: string;
   temperature: number;
+  // PROPERTI BARU: Warna aksen untuk kustomisasi tema
+  accentColor: string;
 }
