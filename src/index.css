@@ -1,11 +1,10 @@
-@import "prismjs/themes/prism-dark.css"; /* Tambahkan ini di bagian atas */
+/* ---- PERBAIKAN: Semua @import HARUS di bagian paling atas file ---- */
+@import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&display=swap");
+@import "prismjs/themes/prism-dark.css";
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-/* Custom Fonts */
-@import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&display=swap");
 
 /* Base Styles */
 * {
@@ -25,28 +24,36 @@ body {
   overflow: hidden;
 }
 
-/* Custom Scrollbar */
-.scrollbar-thin {
-  scrollbar-width: thin;
-  scrollbar-color: rgba(0, 212, 255, 0.5) rgba(31, 41, 55, 0.5);
+/* Custom Scrollbar - DITINGKATKAN */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px; /* Lebar scrollbar vertikal */
+  height: 8px; /* Tinggi scrollbar horizontal */
 }
 
-.scrollbar-thin::-webkit-scrollbar {
-  width: 6px;
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: rgba(31, 41, 55, 0.3); /* Track lebih transparan */
+  border-radius: 4px; /* Border radius sedikit lebih kecil */
 }
 
-.scrollbar-thin::-webkit-scrollbar-track {
-  background: rgba(31, 41, 55, 0.5);
-  border-radius: 3px;
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: var(
+    --accent-color,
+    #06b6d4
+  ); /* Warna thumb scrollbar dari variabel tema */
+  border-radius: 4px; /* Border radius sedikit lebih kecil */
+  border: 1px solid rgba(0, 0, 0, 0.1); /* Border lebih halus */
+  background-clip: padding-box; /* Pastikan border di luar warna */
 }
 
-.scrollbar-thin::-webkit-scrollbar-thumb {
-  background: rgba(0, 212, 255, 0.5);
-  border-radius: 3px;
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-color, #06b6d4);
+  opacity: 0.9; /* Sedikit lebih solid saat hover */
 }
 
-.scrollbar-thin::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 212, 255, 0.8);
+/* Untuk Firefox */
+.custom-scrollbar {
+  scrollbar-width: thin; /* "auto" atau "thin" */
+  scrollbar-color: var(--accent-color, #06b6d4) rgba(31, 41, 55, 0.3); /* thumb dan track color */
 }
 
 /* Prose Customizations for structured text */
@@ -302,32 +309,74 @@ body {
   opacity: 0.1;
 }
 
-.custom-scrollbar::-webkit-scrollbar {
-  width: 8px; /* Lebar scrollbar vertikal */
-  height: 8px; /* Tinggi scrollbar horizontal */
+/* Custom Themes - Variabel CSS */
+.theme-default {
+  --primary-color: #0d1117; /* GitHub Dark */
+  --secondary-color: #161b22;
+  --accent-color: #06b6d4; /* Cyan */
+  --text-color: #e2e8f0;
+  --border-color: rgba(6, 182, 212, 0.3);
 }
 
-.custom-scrollbar::-webkit-scrollbar-track {
-  background: #333; /* Warna track scrollbar */
-  border-radius: 10px;
+.theme-cyberpunk {
+  --primary-color: #1a002b; /* Deep Purple */
+  --secondary-color: #2e004a;
+  --accent-color: #00e5ff; /* Electric Blue */
+  --text-color: #f0ff1a; /* Neon Yellow */
+  --border-color: rgba(0, 229, 255, 0.5);
 }
 
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  background: var(
-    --accent-color,
-    #06b6d4
-  ); /* Warna thumb scrollbar, gunakan warna aksen */
-  border-radius: 10px;
-  border: 2px solid #333; /* Border di sekitar thumb */
+.theme-matrix {
+  --primary-color: #000000;
+  --secondary-color: #0a0a0a;
+  --accent-color: #00ff41; /* Neo Green */
+  --text-color: #00cc33;
+  --border-color: rgba(0, 255, 65, 0.4);
 }
 
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: var(--accent-color, #06b6d4); /* Warna thumb saat hover */
-  opacity: 0.8;
+.theme-vaporwave {
+  --primary-color: #2b004d; /* Dark Purple */
+  --secondary-color: #4a0082;
+  --accent-color: #ff00ff; /* Magenta */
+  --text-color: #00ffff; /* Cyan */
+  --border-color: rgba(255, 0, 255, 0.4);
 }
 
-/* Untuk Firefox */
-.custom-scrollbar {
-  scrollbar-width: thin; /* "auto" atau "thin" */
-  scrollbar-color: var(--accent-color, #06b6d4) #333; /* thumb dan track color */
+/* Terapkan variabel tema ke elemen yang sesuai */
+body.theme-default {
+  background-color: var(--primary-color);
+  color: var(--text-color);
 }
+body.theme-cyberpunk {
+  background-color: var(--primary-color);
+  color: var(--text-color);
+}
+body.theme-matrix {
+  background-color: var(--primary-color);
+  color: var(--text-color);
+}
+body.theme-vaporwave {
+  background-color: var(--primary-color);
+  color: var(--text-color);
+}
+
+/* Contoh penggunaan variabel tema di komponen */
+.bg-gray-900,
+.bg-gray-950 {
+  /* Sesuaikan jika Anda menggunakan kelas ini di tempat lain */
+  background-color: var(--primary-color);
+}
+.bg-gray-800 {
+  background-color: var(--secondary-color);
+}
+/* Untuk border */
+.border-cyan-500\/30 {
+  /* Contoh kelas Tailwind */
+  border-color: var(--border-color);
+}
+.text-cyan-400 {
+  color: var(--accent-color);
+}
+/* Anda perlu mengganti kelas warna Tailwind langsung di komponen React
+   dengan style={{ backgroundColor: 'var(--primary-color)' }}
+   atau menggunakan variabel CSS secara langsung di kelas Tailwind kustom jika Anda menentukannya di theme extend tailwind.config.js */

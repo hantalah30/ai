@@ -8,8 +8,8 @@ export default {
         "spin-reverse": "spin-reverse 7s linear infinite",
         "ping-faster": "ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite",
         "ping-slow": "ping 2.5s cubic-bezier(0, 0, 0.2, 1) infinite",
-        "glitch-active": "glitch-active 1s linear infinite", // Animasi glitch aktif
-        "glitch-idle": "glitch-idle 4s linear infinite", // Animasi glitch saat idle
+        "glitch-active": "glitch-active 1s linear infinite",
+        "glitch-idle": "glitch-idle 4s linear infinite",
       },
       keyframes: {
         "spin-reverse": {

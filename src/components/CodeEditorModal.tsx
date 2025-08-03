@@ -1,6 +1,6 @@
 // src/components/CodeEditorModal.tsx
 
-import React, { useState, useEffect, useRef, KeyboardEvent } from "react";
+import React, { useState, useEffect } from "react";
 import { X, Save } from "lucide-react";
 
 interface CodeEditorModalProps {
@@ -19,53 +19,37 @@ const CodeEditorModal: React.FC<CodeEditorModalProps> = ({
   onSave,
 }) => {
   const [currentCode, setCurrentCode] = useState(initialCode);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
-    if (isOpen) {
-      setCurrentCode(initialCode);
-      setTimeout(() => textareaRef.current?.focus(), 100);
-    }
-  }, [initialCode, isOpen]);
+    setCurrentCode(initialCode);
+  }, [initialCode]);
 
   const handleSave = () => {
-    onSave(currentCode.trim());
+    onSave(currentCode);
     onClose();
-  };
-
-  const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
-    if ((e.metaKey || e.ctrlKey) && e.key === "s") {
-      e.preventDefault();
-      handleSave();
-    }
   };
 
   if (!isOpen) return null;
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75 backdrop-blur-sm p-4"
-      role="dialog"
-      aria-modal="true"
-      aria-label="Code Editor Modal"
-    >
-      <div className="bg-gray-800 rounded-lg shadow-2xl flex flex-col w-full max-w-4xl h-[90vh] animate-fadeIn">
-        {/* Header */}
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75 backdrop-blur-sm p-4">
+      <div className="bg-gray-800 rounded-lg shadow-xl flex flex-col w-full max-w-4xl h-5/6 sm:h-[90vh]">
+        {/* Header Modal */}
         <div className="flex items-center justify-between p-4 border-b border-cyan-500/30">
-          <h2 className="text-xl font-semibold text-white tracking-wide">
+          <h2 className="text-xl font-bold text-white">
             Code Editor ({language.toUpperCase()})
           </h2>
           <div className="flex space-x-2">
             <button
               onClick={handleSave}
-              className="p-2 rounded-full bg-green-600 text-white hover:bg-green-700 transition-colors focus:outline-none focus:ring focus:ring-green-400"
-              title="Save Code (Ctrl+S)"
+              className="p-2 rounded-full bg-green-600 text-white hover:bg-green-700 transition-colors"
+              title="Save Code"
             >
               <Save size={20} />
             </button>
             <button
               onClick={onClose}
-              className="p-2 rounded-full bg-red-600 text-white hover:bg-red-700 transition-colors focus:outline-none focus:ring focus:ring-red-400"
+              className="p-2 rounded-full bg-red-600 text-white hover:bg-red-700 transition-colors"
               title="Close Editor"
             >
               <X size={20} />
@@ -73,14 +57,12 @@ const CodeEditorModal: React.FC<CodeEditorModalProps> = ({
           </div>
         </div>
 
-        {/* Editor */}
-        <div className="flex-1 p-4 bg-gray-900 rounded-b-lg overflow-hidden">
+        {/* Area Textarea Editor Sederhana */}
+        <div className="flex-1 p-4 bg-gray-900 rounded-b-lg">
           <textarea
-            ref={textareaRef}
             className="w-full h-full p-3 bg-gray-900 text-gray-200 font-mono text-sm sm:text-base rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-cyan-500 custom-scrollbar"
             value={currentCode}
             onChange={(e) => setCurrentCode(e.target.value)}
-            onKeyDown={handleKeyDown}
             spellCheck="false"
             autoCorrect="off"
             autoCapitalize="off"

@@ -10,7 +10,8 @@ import MusicPlayerModal from "./components/MusicPlayerModal";
 import SettingsModal from "./components/SettingsModal";
 import LivePreview from "./components/LivePreview";
 import CodeEditorModal from "./components/CodeEditorModal";
-import { Message, AppSettings, MessagePart, Track } from "./types";
+import ChatHistoryModal from "./components/ChatHistoryModal";
+import { Message, AppSettings, MessagePart, Track, ChatSession } from "./types";
 import {
   GoogleGenerativeAI,
   Content,
@@ -84,10 +85,6 @@ function App() {
             line-height: 1.6;
             color: #a0aec0;
         }
-        .highlight {
-            color: #63b3ed;
-            font-weight: bold;
-        }
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(20px); }
             to { opacity: 1; transform: translateY(0); }
@@ -103,34 +100,82 @@ function App() {
 </body>
 </html>`;
 
-  // --- FITUR: Manajemen Sesi Obrolan (Memuat Pesan) ---
-  const [messages, setMessages] = useState<Message[]>(() => {
+  // --- Manajemen Sesi Obrolan (Memuat Sesi) ---
+  const [chatSessions, setChatSessions] = useState<ChatSession[]>(() => {
     try {
-      const savedMessages = localStorage.getItem("hawai-chat-history");
-      if (savedMessages) {
-        const parsedMessages = JSON.parse(savedMessages) as Message[];
-        return parsedMessages.map((msg) => ({
-          ...msg,
-          timestamp: new Date(msg.timestamp),
-        }));
+      const savedSessions = localStorage.getItem("hawai-chat-sessions");
+      if (savedSessions) {
+        const parsedSessions: ChatSession[] = JSON.parse(savedSessions).map(
+          (session: ChatSession) => ({
+            ...session,
+            messages: session.messages.map((msg) => ({
+              ...msg,
+              timestamp: new Date(msg.timestamp),
+            })),
+            createdAt: new Date(session.createdAt),
+            lastUpdated: new Date(session.lastUpdated),
+          })
+        );
+        return parsedSessions;
       }
     } catch (error) {
-      console.error("Failed to load chat history from localStorage", error);
+      console.error("Failed to load chat sessions from localStorage", error);
     }
-    return [initialWelcomeMessage];
+    // Buat sesi default jika tidak ada yang ditemukan
+    const defaultSession: ChatSession = {
+      id: "default-" + Date.now(),
+      title: "New Chat " + new Date().toLocaleString(),
+      messages: [initialWelcomeMessage],
+      createdAt: new Date(),
+      lastUpdated: new Date(),
+      livePreviewCode: defaultLivePreviewContent, // Inisialisasi untuk sesi baru
+      livePreviewLanguage: "html",
+      editorCode: defaultLivePreviewContent,
+      editorLanguage: "html",
+    };
+    return [defaultSession];
   });
 
-  // --- FITUR: Manajemen Sesi Obrolan (Menyimpan Pesan) ---
+  const [currentChatSessionId, setCurrentChatSessionId] = useState<string>(
+    () => {
+      try {
+        const savedCurrentId = localStorage.getItem("hawai-current-chat-id");
+        if (
+          savedCurrentId &&
+          chatSessions.some((s) => s.id === savedCurrentId)
+        ) {
+          return savedCurrentId;
+        }
+      } catch (error) {
+        console.error(
+          "Failed to load current chat ID from localStorage",
+          error
+        );
+      }
+      return chatSessions[0].id; // Gunakan ID sesi default
+    }
+  );
+
+  const currentChatSession = useMemo(() => {
+    return (
+      chatSessions.find((s) => s.id === currentChatSessionId) || chatSessions[0]
+    );
+  }, [chatSessions, currentChatSessionId]);
+
+  // Messages yang aktif adalah dari sesi saat ini
+  const currentMessages = currentChatSession.messages;
+
+  // --- Manajemen Sesi Obrolan (Menyimpan Sesi) ---
   useEffect(() => {
     try {
-      localStorage.setItem("hawai-chat-history", JSON.stringify(messages));
+      localStorage.setItem("hawai-chat-sessions", JSON.stringify(chatSessions));
+      localStorage.setItem("hawai-current-chat-id", currentChatSessionId);
     } catch (error) {
-      console.error("Failed to save chat history to localStorage", error);
+      console.error("Failed to save chat sessions to localStorage", error);
     }
-  }, [messages]);
+  }, [chatSessions, currentChatSessionId]);
 
-  const [hasShownWelcome, setHasShownWelcome] = useState(messages.length <= 1);
-
+  // --- Pengaturan Aplikasi (Memuat & Menyimpan) ---
   const [settings, setSettings] = useState<AppSettings>(() => {
     const savedSettings = localStorage.getItem("hawai-settings");
     const defaults: Omit<AppSettings, "apiKey"> = {
@@ -140,6 +185,8 @@ function App() {
       model: "models/gemini-1.5-flash",
       systemPrompt: "You are HAWAI, a helpful and futuristic AI assistant.",
       temperature: 0.7,
+      theme: "default", // Default theme
+      aiPersonality: "helpful", // Default personality
     };
     return savedSettings
       ? { ...defaults, ...JSON.parse(savedSettings) }
@@ -149,6 +196,19 @@ function App() {
   useEffect(() => {
     localStorage.setItem("hawai-settings", JSON.stringify(settings));
   }, [settings]);
+
+  // NEW: Efek untuk menerapkan tema ke elemen body
+  useEffect(() => {
+    // Hapus semua kelas tema yang ada sebelumnya
+    document.body.classList.remove(
+      "theme-default",
+      "theme-cyberpunk",
+      "theme-matrix",
+      "theme-vaporwave"
+    );
+    // Tambahkan kelas tema yang baru
+    document.body.classList.add(`theme-${settings.theme}`);
+  }, [settings.theme]);
 
   const genAI = useMemo(() => new GoogleGenerativeAI(API_KEY), []);
 
@@ -161,21 +221,19 @@ function App() {
   const initialLocalTracks: Track[] = [
     {
       id: "local-track-1",
-      url: "/audio/Bergema Sampai Selamanya - Nadhif Basalamah  Lirik Lagu - Indolirik.mp3", // Ganti dengan jalur berkas audio Anda
+      url: "/audio/Bergema Sampai Selamanya - Nadhif Basalamah  Lirik Lagu - Indolirik.mp3",
       title: "Bergema Sampai Selamanya",
       isLocal: true,
     },
     {
       id: "local-track-2",
-      url: "/audio/.Feast - Nina (Official Lyric Video) - .Feast.mp3", // Ganti dengan jalur berkas audio Anda
+      url: "/audio/.Feast - Nina (Official Lyric Video) - .Feast.mp3",
       title: ".Feast - Nina",
       isLocal: true,
     },
-    // Tambahkan lebih banyak lagu lokal di sini sesuai kebutuhan
   ];
 
   // State untuk pemutar musik dan playlist
-  // Gunakan initialLocalTracks sebagai nilai awal untuk playlist
   const [playlist, setPlaylist] = useState<Track[]>(initialLocalTracks);
   const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -189,20 +247,54 @@ function App() {
   // State untuk inspeksi URL judul otomatis
   const [pendingTrackUrl, setPendingTrackUrl] = useState<string | null>(null);
 
-  // State for Live Preview content
+  // State for Live Preview content (diambil dari sesi chat saat ini)
+  // State ini akan diupdate oleh useEffect dan langsung di handleLoadChat
   const [livePreviewCode, setLivePreviewCode] = useState(
-    defaultLivePreviewContent
+    currentChatSession.livePreviewCode
   );
-  const [livePreviewLanguage, setLivePreviewLanguage] = useState("html");
+  const [livePreviewLanguage, setLivePreviewLanguage] = useState(
+    currentChatSession.livePreviewLanguage
+  );
+  // State to hold the code in the editor (diambil dari sesi chat saat ini)
+  const [editorCode, setEditorCode] = useState(currentChatSession.editorCode);
+  const [editorLanguage, setEditorLanguage] = useState(
+    currentChatSession.editorLanguage
+  );
+
+  // Perbarui state Live Preview dan Editor ketika sesi chat berubah
+  // useEffect ini masih diperlukan untuk memantau perubahan internal pada livePreviewCode/editorCode
+  // dan menyimpannya ke currentChatSession
+  useEffect(() => {
+    setChatSessions((prevSessions) =>
+      prevSessions.map((session) =>
+        session.id === currentChatSessionId
+          ? {
+              ...session,
+              livePreviewCode: livePreviewCode,
+              livePreviewLanguage: livePreviewLanguage,
+              editorCode: editorCode,
+              editorLanguage: editorLanguage,
+              lastUpdated: new Date(),
+            }
+          : session
+      )
+    );
+  }, [
+    livePreviewCode,
+    livePreviewLanguage,
+    editorCode,
+    editorLanguage,
+    currentChatSessionId,
+  ]);
+
   // New state to control Live Preview visibility
   const [showLivePreview, setShowLivePreview] = useState(false);
   // New state for Code Editor visibility
   const [showCodeEditor, setShowCodeEditor] = useState(false);
-  // State to hold the code in the editor (can be different from livePreviewCode)
-  const [editorCode, setEditorCode] = useState(defaultLivePreviewContent);
-  const [editorLanguage, setEditorLanguage] = useState("html");
   // NEW: State for Live Preview Full Screen
   const [isLivePreviewFullScreen, setIsLivePreviewFullScreen] = useState(false);
+  // NEW: State for Chat History Modal visibility
+  const [isChatHistoryModalOpen, setIsChatHistoryModalOpen] = useState(false);
 
   // Function to toggle Live Preview visibility
   const handleToggleLivePreview = () => {
@@ -230,8 +322,8 @@ function App() {
   // Callback from CodeEditorModal when code is saved
   const handleEditorCodeSave = (code: string) => {
     setLivePreviewCode(code); // Update Live Preview with saved code
-    // Assuming language won't change often from editor, or add a language selector to editor
     setLivePreviewLanguage(editorLanguage); // Keep the language consistent
+    setEditorCode(code); // Update also editorCode state since it's saved in the session
   };
 
   useEffect(() => {
@@ -242,10 +334,21 @@ function App() {
         sender: "ai",
         timestamp: new Date(),
       };
-      setMessages((current) => [...current, errorMsg]);
+      // Perbarui pesan di sesi chat saat ini
+      setChatSessions((prevSessions) =>
+        prevSessions.map((session) =>
+          session.id === currentChatSessionId
+            ? {
+                ...session,
+                messages: [...session.messages, errorMsg],
+                lastUpdated: new Date(),
+              }
+            : session
+        )
+      );
       setError(null);
     }
-  }, [error]);
+  }, [error, currentChatSessionId]);
 
   const handleSendMessage = async (parts: MessagePart[]) => {
     const userMessage: Message = {
@@ -260,7 +363,19 @@ function App() {
       sender: "ai",
       timestamp: new Date(),
     };
-    setMessages((current) => [...current, userMessage, aiPlaceholder]);
+
+    // Perbarui pesan di sesi chat saat ini
+    setChatSessions((prevSessions) =>
+      prevSessions.map((session) =>
+        session.id === currentChatSessionId
+          ? {
+              ...session,
+              messages: [...session.messages, userMessage, aiPlaceholder],
+              lastUpdated: new Date(),
+            }
+          : session
+      )
+    );
     setIsStreaming(true);
 
     try {
@@ -327,9 +442,9 @@ function App() {
         promptParts.unshift(combinedText.trim());
       }
 
-      const history = messages
+      // Gunakan pesan dari sesi saat ini untuk riwayat chat
+      const history = currentChatSession.messages
         .filter((m) => m.id !== "welcome")
-        .slice(0, -2)
         .map((m) => ({
           role: m.sender === "user" ? "user" : "model",
           parts: m.parts
@@ -383,8 +498,8 @@ function App() {
 
         let codeToPreview = "";
         let languageToPreview = "html";
-        let codeToEditor = ""; // Code to set in the editor
-        let languageToEditor = "html"; // Language to set in the editor
+        let codeToEditor = "";
+        let languageToEditor = "html";
 
         // Prioritize combining HTML, CSS, and JS for live preview
         if (
@@ -432,42 +547,171 @@ function App() {
 
         setLivePreviewCode(codeToPreview);
         setLivePreviewLanguage(languageToPreview);
-        setEditorCode(codeToEditor); // Update editor's content
-        setEditorLanguage(languageToEditor); // Update editor's language
+        setEditorCode(codeToEditor);
+        setEditorLanguage(languageToEditor);
 
-        setMessages((current) =>
-          current.map((m) =>
-            m.id === aiPlaceholder.id
-              ? { ...m, parts: [{ type: "text", content: accumulatedText }] }
-              : m
+        // Perbarui pesan AI di sesi saat ini secara streaming
+        setChatSessions((prevSessions) =>
+          prevSessions.map((session) =>
+            session.id === currentChatSessionId
+              ? {
+                  ...session,
+                  messages: session.messages.map((msg) =>
+                    msg.id === aiPlaceholder.id
+                      ? {
+                          ...msg,
+                          parts: [{ type: "text", content: accumulatedText }],
+                        }
+                      : msg
+                  ),
+                  lastUpdated: new Date(),
+                  // Perbarui juga data Live Preview/Editor di sesi
+                  livePreviewCode: codeToPreview,
+                  livePreviewLanguage: languageToPreview,
+                  editorCode: codeToEditor,
+                  editorLanguage: languageToEditor,
+                }
+              : session
           )
         );
+
+        // Auto-generate title after the first AI chunk if title is default
+        if (
+          currentChatSession.title.startsWith("New Chat") &&
+          accumulatedText.length > 50
+        ) {
+          // Trigger title generation (could be an AI call here)
+          // For simplicity, let's use a simple heuristic for now
+          const newTitle =
+            accumulatedText.split("\n")[0].substring(0, 40) + "...";
+          handleRenameChat(currentChatSessionId, newTitle);
+        }
       }
     } catch (e) {
       console.error(e);
       const errorMessage =
         e instanceof Error ? e.message : "An unknown error occurred.";
       setError(errorMessage);
-      setMessages((current) =>
-        current.filter((m) => m.id !== aiPlaceholder.id)
+      // Hapus placeholder dan tambahkan error jika terjadi kesalahan
+      setChatSessions((prevSessions) =>
+        prevSessions.map((session) =>
+          session.id === currentChatSessionId
+            ? {
+                ...session,
+                messages: session.messages
+                  .filter((msg) => msg.id !== aiPlaceholder.id)
+                  .concat({
+                    id: Date.now().toString(),
+                    parts: [
+                      { type: "text", content: `**Error:** ${errorMessage}` },
+                    ],
+                    sender: "ai",
+                    timestamp: new Date(),
+                  }),
+                lastUpdated: new Date(),
+              }
+            : session
+        )
       );
     } finally {
       setIsStreaming(false);
     }
   };
 
-  const handleClearChat = () => {
-    setMessages([initialWelcomeMessage]);
-    setHasShownWelcome(true);
-    localStorage.removeItem("hawai-chat-history");
-    // Clear live preview and editor on chat clear
+  // --- Fungsi Manajemen Sesi Chat Baru ---
+  const handleNewChat = () => {
+    const newSessionId = "chat-" + Date.now();
+    const newSession: ChatSession = {
+      id: newSessionId,
+      title: "New Chat " + new Date().toLocaleString(), // Judul default
+      messages: [initialWelcomeMessage],
+      createdAt: new Date(),
+      lastUpdated: new Date(),
+      livePreviewCode: defaultLivePreviewContent, // Inisialisasi
+      livePreviewLanguage: "html",
+      editorCode: defaultLivePreviewContent,
+      editorLanguage: "html",
+    };
+
+    setChatSessions((prevSessions) => [...prevSessions, newSession]);
+    setCurrentChatSessionId(newSessionId);
+
+    // Reset Live Preview dan Editor saat chat baru
     setLivePreviewCode(defaultLivePreviewContent);
     setLivePreviewLanguage("html");
-    setShowLivePreview(false);
     setEditorCode(defaultLivePreviewContent);
     setEditorLanguage("html");
+    setShowLivePreview(false);
     setShowCodeEditor(false);
-    setIsLivePreviewFullScreen(false); // Also reset full screen state
+    setIsLivePreviewFullScreen(false);
+  };
+
+  const handleLoadChat = (sessionId: string) => {
+    // Cari sesi yang akan dimuat
+    const sessionToLoad = chatSessions.find((s) => s.id === sessionId);
+    if (sessionToLoad) {
+      // PERBAIKAN: Langsung perbarui state Live Preview/Editor di sini
+      setLivePreviewCode(sessionToLoad.livePreviewCode);
+      setLivePreviewLanguage(sessionToLoad.livePreviewLanguage);
+      setEditorCode(sessionToLoad.editorCode);
+      setEditorLanguage(sessionToLoad.editorLanguage);
+      setCurrentChatSessionId(sessionId); // Set current ID terakhir
+    }
+    setIsChatHistoryModalOpen(false); // Tutup modal setelah memuat
+  };
+
+  const handleDeleteChat = (sessionId: string) => {
+    setChatSessions((prevSessions) => {
+      const updatedSessions = prevSessions.filter((s) => s.id !== sessionId);
+
+      if (updatedSessions.length === 0) {
+        // Jika semua dihapus, buat sesi baru
+        const newSession: ChatSession = {
+          id: "default-" + Date.now(),
+          title: "New Chat " + new Date().toLocaleString(),
+          messages: [initialWelcomeMessage],
+          createdAt: new Date(),
+          lastUpdated: new Date(),
+          livePreviewCode: defaultLivePreviewContent,
+          livePreviewLanguage: "html",
+          editorCode: defaultLivePreviewContent,
+          editorLanguage: "html",
+        };
+        setCurrentChatSessionId(newSession.id);
+        return [newSession];
+      } else if (sessionId === currentChatSessionId) {
+        // Jika sesi aktif dihapus, pindah ke sesi pertama yang tersisa
+        setCurrentChatSessionId(updatedSessions[0].id);
+      }
+      return updatedSessions;
+    });
+  };
+
+  const handleRenameChat = (sessionId: string, newTitle: string) => {
+    setChatSessions((prevSessions) =>
+      prevSessions.map((session) =>
+        session.id === sessionId
+          ? { ...session, title: newTitle, lastUpdated: new Date() }
+          : session
+      )
+    );
+  };
+
+  // NEW: Fungsi untuk menghapus pesan di sesi chat saat ini saja
+  const handleClearCurrentChatMessages = () => {
+    setChatSessions((prevSessions) =>
+      prevSessions.map((session) =>
+        session.id === currentChatSessionId
+          ? {
+              ...session,
+              messages: [initialWelcomeMessage], // Hanya pesan welcome
+              lastUpdated: new Date(),
+              // Live Preview/Editor content dipertahankan di sini
+            }
+          : session
+      )
+    );
+    // Live Preview dan Editor di UI juga dipertahankan, tidak di-reset
   };
 
   // Modifikasi handleAddToQueue untuk mendukung berkas lokal
@@ -631,6 +875,8 @@ function App() {
           onToggleLivePreview={handleToggleLivePreview}
           onToggleCodeEditor={handleToggleCodeEditor}
           isStreaming={isStreaming}
+          onNewChat={handleNewChat}
+          onOpenChatHistory={() => setIsChatHistoryModalOpen(true)}
         />
 
         {/* Render LivePreview in full screen if active, otherwise in main layout */}
@@ -638,9 +884,9 @@ function App() {
           <LivePreview
             code={livePreviewCode}
             language={livePreviewLanguage}
-            isFullScreen={true} // Selalu true ketika dirender di sini
-            onToggleFullScreen={handleToggleLivePreviewFullScreen} // Gunakan toggle yang sama
-            isStreaming={isStreaming} // Teruskan isStreaming ke LivePreview
+            isFullScreen={true}
+            onToggleFullScreen={handleToggleLivePreviewFullScreen}
+            isStreaming={isStreaming}
           />
         ) : (
           <main className="flex-1 flex flex-col sm:flex-row overflow-hidden pt-16">
@@ -654,19 +900,17 @@ function App() {
             >
               {settings.isTerminalMode ? (
                 <TerminalMode
-                  messages={messages}
+                  messages={currentMessages}
                   onSendMessage={(text) =>
                     handleSendMessage([{ type: "text", content: text }])
                   }
-                  onClearTerminal={handleClearChat}
+                  onClearTerminal={handleClearCurrentChatMessages} // Perbarui untuk membersihkan pesan chat saat ini
                 />
               ) : (
                 <ChatInterface
-                  messages={messages}
+                  messages={currentMessages}
                   onSendMessage={handleSendMessage}
                   isStreaming={isStreaming}
-                  hasShownWelcome={hasShownWelcome}
-                  setHasShownWelcome={setHasShownWelcome}
                 />
               )}
             </div>
@@ -677,9 +921,9 @@ function App() {
                 <LivePreview
                   code={livePreviewCode}
                   language={livePreviewLanguage}
-                  isFullScreen={false} // Selalu false ketika dirender di sini
+                  isFullScreen={false}
                   onToggleFullScreen={handleToggleLivePreviewFullScreen}
-                  isStreaming={isStreaming} // Teruskan isStreaming ke LivePreview
+                  isStreaming={isStreaming}
                 />
               </div>
             )}
@@ -694,6 +938,18 @@ function App() {
         initialCode={editorCode}
         language={editorLanguage}
         onSave={handleEditorCodeSave}
+      />
+
+      {/* Chat History Modal */}
+      <ChatHistoryModal
+        isOpen={isChatHistoryModalOpen}
+        onClose={() => setIsChatHistoryModalOpen(false)}
+        sessions={chatSessions}
+        currentSessionId={currentChatSessionId}
+        onLoadChat={handleLoadChat}
+        onNewChat={handleNewChat}
+        onDeleteChat={handleDeleteChat}
+        onRenameChat={handleRenameChat}
       />
 
       <MusicPlayerBubble
@@ -711,7 +967,7 @@ function App() {
         isOpen={isMusicModalOpen}
         onClose={() => setIsMusicModalOpen(false)}
         onUrlSubmit={handleUrlSubmit}
-        onLocalFileSubmit={handleLocalFileSubmit} // Lewatkan handler baru
+        onLocalFileSubmit={handleLocalFileSubmit}
         playlist={playlist}
         activeTrackId={activeTrack?.id}
         isPlaying={isPlaying}
@@ -727,7 +983,11 @@ function App() {
         onClose={() => setIsSettingsModalOpen(false)}
         settings={settings}
         onSettingsChange={setSettings}
-        onClearChat={handleClearChat}
+        onClearChat={() => {
+          // Tombol "Hapus Riwayat Chat" di Pengaturan sekarang menghapus sesi aktif
+          handleDeleteChat(currentChatSessionId);
+          setIsSettingsModalOpen(false); // Tutup modal pengaturan
+        }}
       />
 
       {/* Player Utama untuk memutar musik */}

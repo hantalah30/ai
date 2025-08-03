@@ -6,7 +6,6 @@ export interface Track {
   url: string;
   title: string;
   duration?: number;
-  isLocal?: boolean; // Tambahkan ini jika belum ada
 }
 
 export interface MessagePart {
@@ -30,6 +29,23 @@ export interface AppSettings {
   model: string;
   systemPrompt: string;
   temperature: number;
-  // PROPERTI BARU: Warna aksen untuk kustomisasi tema
-  accentColor: string;
+  theme: string; // Misalnya, 'default', 'cyberpunk', 'matrix'
+  aiPersonality: string; // Misalnya, 'helpful', 'sarcastic', 'chill'
+  // NEW: Pengaturan terminal dan kecepatan mengetik
+  terminalPrompt: string; // Prompt terminal kustom
+  typingSpeed: number; // Kecepatan mengetik AI (misalnya, ms per karakter)
+}
+
+// Tambahkan antarmuka ChatSession BARU
+export interface ChatSession {
+  id: string;
+  title: string;
+  messages: Message[];
+  createdAt: Date;
+  lastUpdated: Date;
+  // Tambahkan properti untuk Live Preview dan Code Editor per sesi
+  livePreviewCode: string;
+  livePreviewLanguage: string;
+  editorCode: string;
+  editorLanguage: string;
 }

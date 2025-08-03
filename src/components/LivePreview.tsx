@@ -1,16 +1,16 @@
 // src/components/LivePreview.tsx
 
 import React from "react";
-import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
-import { darcula } from "react-syntax-highlighter/dist/esm/styles/prism";
+import { darcula } from "react-syntax-highlighter/dist/cjs/styles/prism";
 import { Maximize, Minimize } from "lucide-react";
+import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 
 interface LivePreviewProps {
   code: string;
   language: string;
   isFullScreen: boolean;
   onToggleFullScreen: () => void;
-  isStreaming: boolean; // Prop baru untuk indikator streaming
+  isStreaming: boolean;
 }
 
 const LivePreview: React.FC<LivePreviewProps> = ({
@@ -22,6 +22,9 @@ const LivePreview: React.FC<LivePreviewProps> = ({
 }) => {
   const getPreviewOutput = () => {
     if (language === "html") {
+      // Untuk HTML di iframe:
+      // Catatan: Scrollbar di dalam iframe TIDAK DAPAT ditata gaya dari CSS halaman utama karena batasan browser.
+      // Scrollbar yang Anda lihat di sini adalah scrollbar bawaan iframe.
       return (
         <iframe
           srcDoc={code}
@@ -35,16 +38,22 @@ const LivePreview: React.FC<LivePreviewProps> = ({
         />
       );
     } else {
+      // Untuk bahasa lain dengan SyntaxHighlighter:
+      // Kelas custom-scrollbar akan diterapkan ke elemen <pre> internal yang dapat digulir.
       return (
-        <div style={{ overflow: "auto", height: "100%" }}>
-          <SyntaxHighlighter
-            language={language}
-            style={darcula}
-            showLineNumbers
-          >
-            {code}
-          </SyntaxHighlighter>
-        </div>
+        <SyntaxHighlighter
+          language={language}
+          style={darcula}
+          showLineNumbers
+          // HAPUS wrapLines={true} agar scrollbar horizontal muncul untuk baris panjang
+          customStyle={{ height: "100%", width: "100%", overflow: "auto" }}
+          preTagProps={{
+            className: "custom-scrollbar",
+            style: { overflow: "auto" },
+          }}
+        >
+          {code}
+        </SyntaxHighlighter>
       );
     }
   };
@@ -55,12 +64,11 @@ const LivePreview: React.FC<LivePreviewProps> = ({
       flex flex-col rounded-lg shadow-xl overflow-hidden
       ${
         isFullScreen
-          ? "fixed inset-0 z-[100] bg-gray-900" // Gaya full screen
-          : "h-full bg-gray-800" // Gaya normal
+          ? "fixed inset-0 z-[100] bg-gray-900"
+          : "h-full bg-gray-800"
       }
     `}
     >
-      {/* Header Live Preview */}
       <div
         className={`
         flex items-center justify-between p-3 border-b border-cyan-500/30
@@ -70,19 +78,17 @@ const LivePreview: React.FC<LivePreviewProps> = ({
         <h3 className="text-lg font-bold text-white">Live Preview</h3>
         <button
           onClick={onToggleFullScreen}
-          className="p-1 rounded-full text-cyan-400 hover:bg-gray-700 transition-colors"
+          className="p-1 rounded-full text-cyan-400 hover:bg-gray-700/50 transition-colors"
           title={isFullScreen ? "Exit Full Screen" : "Full Screen"}
         >
           {isFullScreen ? <Minimize size={24} /> : <Maximize size={24} />}
         </button>
       </div>
 
-      {/* Area Pratinjau Kode */}
-      <div className="preview-canvas flex-1 p-2 overflow-auto relative">
-        {" "}
-        {/* Tambahkan relative */}
+      {/* Area Pratinjau Kode - custom-scrollbar akan bekerja di sini untuk non-HTML */}
+      <div className="preview-canvas flex-1 p-2 relative overflow-auto custom-scrollbar">
         {getPreviewOutput()}
-        {/* Indikator Pemrosesan (hanya tampil saat full screen dan streaming) */}
+
         {isFullScreen && isStreaming && (
           <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-70 backdrop-blur-sm text-white text-xl font-bold animate-pulse z-[101]">
             AI is Processing...

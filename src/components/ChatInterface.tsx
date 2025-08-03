@@ -1,3 +1,5 @@
+// src/components/ChatInterface.tsx
+
 import React, { useRef, useEffect, useState } from "react";
 import { Message } from "../types";
 import MessageBubble from "./MessageBubble";
@@ -15,36 +17,31 @@ interface ChatInterfaceProps {
     }[]
   ) => void;
   isStreaming: boolean;
-  hasShownWelcome: boolean;
-  setHasShownWelcome: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 const ChatInterface: React.FC<ChatInterfaceProps> = ({
   messages,
   onSendMessage,
   isStreaming,
-  hasShownWelcome,
-  setHasShownWelcome,
 }) => {
   const chatBottomRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const [showScrollButton, setShowScrollButton] = useState(false);
+
+  // Cek apakah pesan saat ini hanya berisi pesan selamat datang bawaan
+  const isWelcomeMessageOnly =
+    messages.length === 1 && messages[0].id === "welcome";
 
   const scrollToBottom = (behavior: "smooth" | "auto" = "smooth") => {
     chatBottomRef.current?.scrollIntoView({ behavior });
   };
 
   useEffect(() => {
+    // Scroll ke bawah saat pesan baru muncul atau saat tombol scroll tidak ditampilkan
     if (!showScrollButton) {
       scrollToBottom("auto");
     }
   }, [messages, showScrollButton]);
-
-  useEffect(() => {
-    if (messages.length > 1 && hasShownWelcome) {
-      setHasShownWelcome(false);
-    }
-  }, [messages, hasShownWelcome, setHasShownWelcome]);
 
   const handleScroll = () => {
     if (chatContainerRef.current) {
@@ -59,9 +56,10 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       <div
         ref={chatContainerRef}
         onScroll={handleScroll}
-        className="flex-1 overflow-y-auto p-4 space-y-4"
+        className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar" /* TAMBAHKAN custom-scrollbar DI SINI */
       >
-        {hasShownWelcome && (
+        {/* Tampilkan pesan selamat datang hanya jika ini adalah sesi chat baru dengan pesan welcome saja */}
+        {isWelcomeMessageOnly && (
           <div className="flex flex-col items-center text-center my-8 animate-fade-in">
             <div className="relative mb-4">
               <img
@@ -76,6 +74,10 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
             <h1 className="text-2xl font-bold text-white font-mono">
               Helloww, welcome to HAWAI!
             </h1>
+            <p className="text-gray-400 max-w-md mt-2">
+              Start by typing a message, or explore existing chats from the
+              history menu.
+            </p>
           </div>
         )}
         {messages.map((message, index) => (
@@ -86,7 +88,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
             isStreaming={isStreaming}
           />
         ))}
-        {/* BLOK "THINKING" YANG LAMA SUDAH DIHAPUS DARI SINI */}
         <div ref={chatBottomRef} />
       </div>
 
